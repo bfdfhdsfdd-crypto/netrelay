@@ -71,6 +71,9 @@ func (s *TunnelConn) RemoteData(m map[string][]byte) {
 }
 
 func (s *TunnelConn) Read(p []byte) (n int, err error) {
+	if len(p) == 0 {
+		return 0, nil
+	}
 	if s.readBuf.Len() != 0 {
 		return s.readBuf.Read(p)
 	}

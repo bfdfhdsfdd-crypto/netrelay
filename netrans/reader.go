@@ -13,17 +13,23 @@ import (
 var ErrReadTimeout = errors.New("read timeout")
 var ErrReaderClosed = errors.New("reader has been closed")
 
-var errNormal = errors.New("normal read")
+type readResult struct {
+	data []byte
+	err  error
+}
 
 type TimeoutReader struct {
-	rc     io.ReadCloser
-	buf    *bufio.Reader
-	t      time.Duration
-	errCh  chan error
-	mu     sync.Mutex
-	closed bool
-	ctx    context.Context
-	cancel func()
+	rc            io.ReadCloser
+	t             time.Duration
+	readCh        chan readResult
+	buffers       sync.Pool
+	pending       []byte
+	pendingBuffer []byte
+	pendingErr    error
+	mu            sync.Mutex
+	closed        bool
+	ctx           context.Context
+	cancel        func()
 }
 
 func NewTimeoutReader(ctx context.Context, r io.Reader, timeout time.Duration) io.Reader {
@@ -38,31 +44,43 @@ func NewTimeoutReadCloser(ctx context.Context, rc io.ReadCloser, timeout time.Du
 
 	tr := &TimeoutReader{
 		rc:     rc,
-		buf:    bufio.NewReaderSize(rc, 4096),
 		t:      timeout,
+		readCh: make(chan readResult),
 		ctx:    ctx,
 		cancel: cancel,
+	}
+	tr.buffers.New = func() any {
+		return make([]byte, 4096)
 	}
 	tr.startLoop()
 	return tr
 }
 
 func (r *TimeoutReader) startLoop() {
-	r.errCh = make(chan error)
 	go func() {
-		defer close(r.errCh)
+		defer close(r.readCh)
+		reader := bufio.NewReaderSize(r.rc, 4096)
 		for {
-			_, err := r.buf.Peek(1)
-			nErr := err
-			if nErr == nil {
-				nErr = errNormal
+			buf := r.buffers.Get().([]byte)
+			n, err := reader.Read(buf)
+			if n > 0 {
+				select {
+				case r.readCh <- readResult{data: buf[:n], err: err}:
+					if err != nil {
+						return
+					}
+				case <-r.ctx.Done():
+					r.buffers.Put(buf)
+					return
+				}
+				continue
 			}
-			select {
-			case r.errCh <- nErr:
-			case <-r.ctx.Done():
-				return
-			}
+			r.buffers.Put(buf)
 			if err != nil {
+				select {
+				case r.readCh <- readResult{err: err}:
+				case <-r.ctx.Done():
+				}
 				return
 			}
 		}
@@ -75,25 +93,50 @@ func (r *TimeoutReader) Read(b []byte) (int, error) {
 	if r.closed {
 		return 0, ErrReaderClosed
 	}
+	if len(b) == 0 {
+		return 0, nil
+	}
 
-reread:
+	if len(r.pending) > 0 {
+		n := copy(b, r.pending)
+		r.pending = r.pending[n:]
+		if len(r.pending) == 0 {
+			r.buffers.Put(r.pendingBuffer)
+			r.pendingBuffer = nil
+		}
+		return n, nil
+	}
+	if r.pendingErr != nil {
+		err := r.pendingErr
+		r.pendingErr = nil
+		return 0, err
+	}
+
+	timer := time.NewTimer(r.t)
+	defer timer.Stop()
 	select {
-	case err := <-r.errCh: // Timeout
-		if r.buf.Buffered() > 0 {
-			return r.buf.Read(b)
-		}
-		if errors.Is(err, errNormal) {
-			// 非预期的情况
-			goto reread
-		}
-		if err == nil {
-			// channel closed
+	case result, ok := <-r.readCh:
+		if !ok {
 			r.closed = true
 			return 0, ErrReaderClosed
-		} else {
-			return 0, err
 		}
-	case <-time.After(r.t):
+		if result.err != nil && len(result.data) == 0 {
+			return 0, result.err
+		}
+		r.pending = result.data
+		r.pendingBuffer = result.data[:cap(result.data)]
+		r.pendingErr = result.err
+		n := copy(b, r.pending)
+		r.pending = r.pending[n:]
+		if len(r.pending) == 0 {
+			r.buffers.Put(r.pendingBuffer)
+			r.pendingBuffer = nil
+		}
+		return n, nil
+	case <-r.ctx.Done():
+		r.closed = true
+		return 0, ErrReaderClosed
+	case <-timer.C:
 		return 0, ErrReadTimeout
 	}
 }
@@ -101,7 +144,16 @@ reread:
 func (r *TimeoutReader) Close() error {
 	err := r.rc.Close()
 	r.cancel()
-	r.closed = true
+	r.mu.Lock()
+	if !r.closed {
+		r.closed = true
+		if r.pendingBuffer != nil {
+			r.buffers.Put(r.pendingBuffer)
+			r.pendingBuffer = nil
+			r.pending = nil
+		}
+	}
+	r.mu.Unlock()
 	return err
 }
 

@@ -96,6 +96,16 @@ func TestTunnelConnCloseUnblocksRead(t *testing.T) {
 	}
 }
 
+func TestTunnelConnZeroLengthReadReturnsImmediately(t *testing.T) {
+	tunnel := NewTunnelConn("zero-length-read", testTunnelConfig(), nil)
+	defer tunnel.CloseSelf()
+
+	n, err := tunnel.Read(nil)
+	if n != 0 || err != nil {
+		t.Fatalf("Read(nil) returned (%d, %v), want (0, nil)", n, err)
+	}
+}
+
 func TestTunnelConnCloseDrainsQueuedData(t *testing.T) {
 	tunnel := NewTunnelConn("close-drain", testTunnelConfig(), nil)
 	tunnel.RemoteData(NewActionData(tunnel.id, []byte("pending")))

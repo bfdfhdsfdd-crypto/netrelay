@@ -9,6 +9,8 @@ import (
 	"io"
 )
 
+const maxFrameSize = 32 * 1024 * 1024
+
 type DataFrame struct {
 	Obs    []byte
 	Length uint32
@@ -26,23 +28,22 @@ func NewDataFrame(data []byte) *DataFrame {
 }
 
 func (d *DataFrame) MarshalBinaryBase64() []byte {
-	newData := make([]byte, len(d.Data))
-	copy(newData, d.Data)
-	for i := 0; i < len(newData); i++ {
-		newData[i] = newData[i] ^ d.Obs[i%2]
-	}
-	newData = []byte(base64.RawURLEncoding.EncodeToString(newData))
-	newLen := uint32(len(newData))
-
-	result := make([]byte, 4)
-	binary.BigEndian.PutUint32(result, newLen)
-	for i := 0; i < len(result); i++ {
-		result[i] = result[i] ^ d.Obs[i%2]
+	encodedDataLength := base64.RawURLEncoding.EncodedLen(len(d.Data))
+	encodedData := make([]byte, len(d.Data))
+	for i, b := range d.Data {
+		encodedData[i] = b ^ d.Obs[i%2]
 	}
 
-	result = append(d.Obs, result...)
-	result = []byte(base64.RawURLEncoding.EncodeToString(result))
-	result = append(result, newData...)
+	var header [6]byte
+	copy(header[:2], d.Obs)
+	binary.BigEndian.PutUint32(header[2:], uint32(encodedDataLength))
+	for i := 2; i < len(header); i++ {
+		header[i] ^= d.Obs[(i-2)%2]
+	}
+
+	result := make([]byte, 8+encodedDataLength)
+	base64.RawURLEncoding.Encode(result[:8], header[:])
+	base64.RawURLEncoding.Encode(result[8:], encodedData)
 	return result
 }
 
@@ -67,14 +68,15 @@ func ReadFrame(r io.Reader) (*DataFrame, error) {
 	fr := &DataFrame{}
 
 	fr.Length = binary.BigEndian.Uint32(bs[:])
-	if fr.Length > 1024*1024*32 {
+	if fr.Length > maxFrameSize {
 		return nil, fmt.Errorf("frame is too big, %d", fr.Length)
 	}
-	n, err := r.Read(bs[:2])
-	if n != 2 || err != nil {
+	var obs [2]byte
+	_, err = io.ReadFull(r, obs[:])
+	if err != nil {
 		return nil, fmt.Errorf("read type error %v", err)
 	}
-	fr.Obs = bs[:2]
+	fr.Obs = obs[:]
 	buf := make([]byte, fr.Length)
 	_, err = io.ReadFull(r, buf)
 	if err != nil {
@@ -100,30 +102,36 @@ func ReadFrameBase64(r io.Reader) (*DataFrame, error) {
 	if n != 8 {
 		return nil, errors.New("incomplete header base64 read")
 	}
-	headerBytes, err := base64.RawURLEncoding.DecodeString(string(headerBase64))
+	var headerBytes [6]byte
+	n, err = base64.RawURLEncoding.Decode(headerBytes[:], headerBase64)
 	if err != nil {
 		return nil, errors.New("failed to decode header base64: " + err.Error())
 	}
-	if len(headerBytes) != 6 {
+	if n != len(headerBytes) {
 		return nil, errors.New("invalid header length, expected 6 bytes after decoding")
 	}
 	// Extract obs and length from the decoded header
-	obs := make([]byte, 2)
-	copy(obs, headerBytes[:2])
+	obs := headerBytes[:2]
 	for i := 2; i < 6; i++ {
 		headerBytes[i] = headerBytes[i] ^ obs[(i-2)%2]
 	}
 	dataLength := binary.BigEndian.Uint32(headerBytes[2:])
+	maxEncodedLength := base64.RawURLEncoding.EncodedLen(maxFrameSize)
+	if uint64(dataLength) > uint64(maxEncodedLength) {
+		return nil, fmt.Errorf("encoded frame is too big, %d", dataLength)
+	}
 
 	buf := make([]byte, dataLength)
 	_, err = io.ReadFull(r, buf)
 	if err != nil {
 		return nil, errors.New("failed to read data base64: " + err.Error())
 	}
-	dataBytes, err := base64.RawURLEncoding.DecodeString(string(buf))
+	dataBytes := make([]byte, base64.RawURLEncoding.DecodedLen(len(buf)))
+	decodedLength, err := base64.RawURLEncoding.Decode(dataBytes, buf)
 	if err != nil {
 		return nil, errors.New("failed to decode data base64: " + err.Error())
 	}
+	dataBytes = dataBytes[:decodedLength]
 	// Decode the data using obs
 	for i := 0; i < len(dataBytes); i++ {
 		dataBytes[i] = dataBytes[i] ^ obs[i%2]

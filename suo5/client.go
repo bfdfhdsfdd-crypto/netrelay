@@ -320,10 +320,15 @@ func (m *Suo5Client) Pipe(r io.Reader, w io.Writer) error {
 	defer m.bytesPool.Put(buf) //nolint:staticcheck
 	for {
 		n, err := r.Read(buf)
-		if err != nil {
-			return err
+		if n > 0 {
+			written, writeErr := w.Write(buf[:n])
+			if writeErr != nil {
+				return writeErr
+			}
+			if written != n {
+				return io.ErrShortWrite
+			}
 		}
-		_, err = w.Write(buf[:n])
 		if err != nil {
 			return err
 		}
