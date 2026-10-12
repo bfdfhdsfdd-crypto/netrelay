@@ -1,0 +1,64 @@
+name: Build CLI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Go tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.26.5'
+          cache-dependency-path: go.sum
+      - run: go test ./...
+
+  build:
+    name: ${{ matrix.os }}-${{ matrix.arch }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows
+            arch: amd64
+            output: suo5-windows-amd64.exe
+          - os: darwin
+            arch: amd64
+            output: suo5-darwin-amd64
+          - os: darwin
+            arch: arm64
+            output: suo5-darwin-arm64
+          - os: linux
+            arch: amd64
+            output: suo5-linux-amd64
+          - os: linux
+            arch: arm64
+            output: suo5-linux-arm64
+    env:
+      CGO_ENABLED: '0'
+      GOOS: ${{ matrix.os }}
+      GOARCH: ${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.26.5'
+          cache-dependency-path: go.sum
+      - run: |
+          mkdir -p target
+          go build -trimpath --tags "neoreg suo5" \
+            -ldflags "-w -s -extldflags '-static' -X main.Version=${GITHUB_SHA}" \
+            -o target/${{ matrix.output }}
+      - uses: actions/upload-artifact@v6
+        with:
+          name: suo5-${{ matrix.os }}-${{ matrix.arch }}
+          path: target/${{ matrix.output }}
+          if-no-files-found: error
