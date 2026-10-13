@@ -50,11 +50,14 @@ NetRelay 是一款高性能 HTTP 隧道客户端，面向获授权的网络测�
 每个 `v*` 版本会自动发布 Linux amd64/arm64 多架构镜像到 GitHub Packages：
 
 ```bash
+echo "$GHCR_TOKEN" | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin
 docker pull ghcr.io/bfdfhdsfdd-crypto/netrelay:v0.1.0
 docker run --rm -p 1111:1111 ghcr.io/bfdfhdsfdd-crypto/netrelay:v0.1.0 \
   --target https://your-authorized-server.example/suo5.jsp \
   --listen 0.0.0.0:1111
 ```
+
+`GHCR_TOKEN` 需要具有 `read:packages` 权限。首次发布的镜像包默认是私有的；如需匿名拉取，可在 GitHub Packages 的包设置中将可见性改为 Public。
 
 服务端脚本文件名与既有 `suo5.jsp` 等部署保持兼容；客户端可继续使用现有服务端。
 
