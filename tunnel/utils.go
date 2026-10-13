@@ -1,4 +1,4 @@
-package suo5
+package tunnel
 
 import (
 	"fmt"

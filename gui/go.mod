@@ -1,12 +1,12 @@
-module changeme
+module github.com/bfdfhdsfdd-crypto/netrelay/gui
 
 go 1.26.5
 
 replace github.com/gorilla/websocket v1.5.3 => github.com/zema1/websocket v0.0.0-20240728051525-7fc49edb27c2
 
 require (
+	github.com/bfdfhdsfdd-crypto/netrelay v0.0.0
 	github.com/wailsapp/wails/v2 v2.13.0
-	github.com/zema1/suo5 v1.3.2-0.20250219115440-31983ee59a83
 )
 
 require (
@@ -53,4 +53,4 @@ require (
 )
 
 // replace github.com/wailsapp/wails/v2 v2.2.0 => C:\Users\Koalr\go\pkg\mod
-replace github.com/zema1/suo5 => ../
+replace github.com/bfdfhdsfdd-crypto/netrelay => ../

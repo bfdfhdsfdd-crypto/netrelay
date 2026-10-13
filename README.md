@@ -1,21 +1,17 @@
-<h1 align="center">Suo5</h1>
+<h1 align="center">NetRelay</h1>
 
-<p align="center">高性能 HTTP 正向代理工具</p>
+<p align="center">高性能 HTTP 隧道客户端</p>
 
 <div align="center">
 
-![Workflow Status](https://img.shields.io/github/actions/workflow/status/zema1/suo5/release.yml?label=release&style=flat-square)
-![Workflow Status](https://img.shields.io/github/actions/workflow/status/zema1/suo5/test.yml?label=test&style=flat-square)
-![Latest release](https://img.shields.io/github/v/release/zema1/suo5?label=latest&style=flat-square)
-![License](https://img.shields.io/github/license/zema1/suo5?style=flat-square)
+![Workflow Status](https://img.shields.io/github/actions/workflow/status/bfdfhdsfdd-crypto/netrelay/build.yml?label=build&style=flat-square)
+![Latest release](https://img.shields.io/github/v/release/bfdfhdsfdd-crypto/netrelay?label=latest&style=flat-square)
+![License](https://img.shields.io/github/license/bfdfhdsfdd-crypto/netrelay?style=flat-square)
 
 </div>
 
 
-![experience](./tests/img/suo5.gif)
-
-
-Suo5 是一款久经实战检验的高性能 HTTP 正向代理工具，持续打磨只为解决一个需求：不出网场景下的稳定正向代理。
+NetRelay 是一款高性能 HTTP 隧道客户端，面向获授权的网络测试与管理场景，重点优化传输效率和连接稳定性。
 
 > [!WARNING]
 > 本工具仅供安全研究人员、网络管理员及相关技术人员进行授权的安全测试、漏洞评估和安全审计工作使用。使用本工具进行任何未经授权的网络攻击或渗透测试等行为均属违法，使用者需自行承担相应的法律责任。
@@ -42,12 +38,25 @@ Suo5 是一款久经实战检验的高性能 HTTP 正向代理工具，持续打
 
 ### 1. 下载客户端
 
-前往 [Releases](https://github.com/zema1/suo5/releases) 下载对应平台的二进制文件：
+前往 [Releases](https://github.com/bfdfhdsfdd-crypto/netrelay/releases) 下载对应平台的二进制文件：
 
-- `suo5-gui-*` - 图形界面版本 (推荐)
-- `suo5-cli-*` - 命令行版本
+- `netrelay-gui-*` - 图形界面版本 (推荐)
+- `netrelay-*` - 命令行版本
 
 支持平台：Windows、macOS (Intel/Apple Silicon)、Linux
+
+### 容器镜像
+
+每个 `v*` 版本会自动发布 Linux amd64/arm64 多架构镜像到 GitHub Packages：
+
+```bash
+docker pull ghcr.io/bfdfhdsfdd-crypto/netrelay:v0.1.0
+docker run --rm -p 1111:1111 ghcr.io/bfdfhdsfdd-crypto/netrelay:v0.1.0 \
+  --target https://your-authorized-server.example/suo5.jsp \
+  --listen 0.0.0.0:1111
+```
+
+服务端脚本文件名与既有 `suo5.jsp` 等部署保持兼容；客户端可继续使用现有服务端。
 
 ### 2. 部署服务端
 
@@ -57,16 +66,16 @@ Java 目标推荐使用 [MemshellParty](https://github.com/ReaJason/MemShellPart
 
 ### 3. 连接服务端
 
-Suo5 针对 `auto` 模式（默认）做了大量的优化，大多数时候你无需复杂参数配置，仅使用 `-t` 指定服务端
+NetRelay 针对 `auto` 模式（默认）做了大量的优化，大多数时候你无需复杂参数配置，仅使用 `-t` 指定兼容服务端
 URL，即可自动确认目标支持的通信模式并在本地启动代理服务：
 
 ```bash
-$ ./suo5 -t http://target.com/suo5.jsp
+$ ./netrelay -t http://target.com/suo5.jsp
 ...
 [INFO] 14:28 connecting to target http://target.com/suo5.jsp
 [INFO] 14:28 preferred connection mode: half
 [INFO] 14:28 handshake success, using session id 05q21upecl90yccl
-[INFO] 14:28 suo5 is going to work on half mode
+[INFO] 14:28 netrelay is going to work on half mode
 [INFO] 14:28 starting tunnel at 127.0.0.1:1111
 [INFO] 14:28 creating a test connection to the remote target
 [INFO] 14:28 start connection to 127.0.0.1:0
@@ -90,15 +99,13 @@ GUI 版基于 [Wails](https://github.com/wailsapp/wails) 构建，支持 Windows
 
 > 该实现依赖系统的 Webview 框架, Windows 11 和 MacOS 已自带该组件，其他系统会弹框请允许下载安装，否则无法使用。
 
-<img src="tests/img/gui.jpg" style="max-width: 800px;"  alt="gui.jpg"/>
-
 CLI 版本适合喜欢命令行操作的用户，或需要在服务器上运行的场景。
 
 ```bash
-$ ./suo5 -h
+$ ./netrelay -h
 
 USAGE:
-   suo5 [global options] command [command options]
+   netrelay [global options] command [command options]
 
 GLOBAL OPTIONS:
    --config value, -c value                                               the filepath for json config file
@@ -130,7 +137,7 @@ GLOBAL OPTIONS:
 
 ## 传输模式对比
 
-Suo5 提供四种传输模式，以适应不同的网络环境和中间件限制：
+NetRelay 提供四种传输模式，以适应不同的网络环境和中间件限制：
 
 |   模式    | 原理                          | 延迟 | 吞吐量 | 适用场景               |
 |:-------:|:----------------------------|:--:|:---:|:-------------------|
@@ -147,18 +154,18 @@ Suo5 提供四种传输模式，以适应不同的网络环境和中间件限制
 
 ```bash
 # 自动检测最佳传输模式
-./suo5 -t https://target.com/suo5.jsp
+./netrelay -t https://target.com/suo5.jsp
 
 # 指定 HTTP 请求方法为 GET, 默认 POST
-./suo5 -m GET -t https://target.com/suo5.jsp
+./netrelay -m GET -t https://target.com/suo5.jsp
 
 # 修改 Socks5 监听地址和端口, 并设置认证信息。 默认监听 127.0.0.1:1111，无认证
-./suo5 -t https://target.com/suo5.jsp -l 0.0.0.0:7788 --auth user:pass123
+./netrelay -t https://target.com/suo5.jsp -l 0.0.0.0:7788 --auth user:pass123
 
 # 设置上游代理
 # 特别注意! 仅短链接模式支持在 Burp 中抓包，其他模式会导致连接异常
-./suo5 -t https://target.com/suo5.jsp --proxy socks5://127.0.0.1:7890
-./suo5 -t https://target.com/suo5.jsp --proxy http://127.0.0.1:8080
+./netrelay -t https://target.com/suo5.jsp --proxy socks5://127.0.0.1:7890
+./netrelay -t https://target.com/suo5.jsp --proxy http://127.0.0.1:8080
 ```
 
 ### 负载均衡场景
@@ -166,7 +173,7 @@ Suo5 提供四种传输模式，以适应不同的网络环境和中间件限制
 当目标存在负载均衡时，需在所有后端部署服务端，并指定重定向 URL：
 
 ```bash
-./suo5 -t https://target.com/suo5.jsp -r http://172.0.3.2/suo5.jsp
+./netrelay -t https://target.com/suo5.jsp -r http://172.0.3.2/suo5.jsp
 ```
 
 原理：判断 `-r` 中 URL 的 IP 是否与服务器网卡 IP 匹配，不匹配则转发请求。
@@ -177,10 +184,10 @@ Suo5 提供四种传输模式，以适应不同的网络环境和中间件限制
 
 ```bash
 # 直接指定域名
-./suo5 -t https://target.com/suo5.jsp -E example.com -E google.com
+./netrelay -t https://target.com/suo5.jsp -E example.com -E google.com
 
 # 使用域名列表文件（一行一个）
-./suo5 -t https://target.com/suo5.jsp -ef ./excludes.txt
+./netrelay -t https://target.com/suo5.jsp -ef ./excludes.txt
 ```
 
 > **注意**：确保代理请求中包含域名而非 IP。使用 `socks5h://` 协议让 DNS 解析在代理端进行：
@@ -194,7 +201,7 @@ Suo5 提供四种传输模式，以适应不同的网络环境和中间件限制
 
 ```bash
 # 将本地 1111 端口转发到目标内网的 MySQL
-./suo5 -t https://target.com/suo5.jsp -f 172.16.0.10:3306
+./netrelay -t https://target.com/suo5.jsp -f 172.16.0.10:3306
 ```
 
 ### 启用 Cookie Jar
@@ -202,7 +209,7 @@ Suo5 提供四种传输模式，以适应不同的网络环境和中间件限制
 保持会话 Cookie，某些服务端可能需要：
 
 ```bash
-./suo5 -t https://target.com/suo5.jsp --jar
+./netrelay -t https://target.com/suo5.jsp --jar
 ```
 
 ### 使用配置文件
@@ -237,7 +244,7 @@ Suo5 提供四种传输模式，以适应不同的网络环境和中间件限制
 
 ```bash
 # CLI 加载配置
-./suo5 -c config.json
+./netrelay -c config.json
 
 # GUI 可通过界面导入/导出配置
 ```
@@ -246,11 +253,11 @@ Suo5 提供四种传输模式，以适应不同的网络环境和中间件限制
 
 **Q: 密码/认证功能**
 
-Suo5 的 `--auth` 参数用于设置**本地 SOCKS5 代理**的认证，格式为 `username:password`。这是为了防止本地代理被未授权使用，与服务端无关。
+NetRelay 的 `--auth` 参数用于设置**本地 SOCKS5 代理**的认证，格式为 `username:password`。这是为了防止本地代理被未授权使用，与服务端无关。
 
 ```bash
 # 设置 SOCKS5 认证
-./suo5 -t https://target.com/suo5.jsp --auth admin:P@ssw0rd
+./netrelay -t https://target.com/suo5.jsp --auth admin:P@ssw0rd
 
 # 使用时需要带上认证信息
 curl -x socks5h://admin:P@ssw0rd@127.0.0.1:1111 http://internal.com
@@ -266,7 +273,7 @@ curl -x socks5h://admin:P@ssw0rd@127.0.0.1:1111 http://internal.com
 仅**短连接模式**支持在 Burp 中抓包，其他模式的长连接会导致 Burp 无法正常处理：
 
 ```bash
-./suo5 -t https://target.com/suo5.jsp --mode classic --proxy http://127.0.0.1:8080
+./netrelay -t https://target.com/suo5.jsp --mode classic --proxy http://127.0.0.1:8080
 ```
 
 **Q: 如何选择传输模式？**

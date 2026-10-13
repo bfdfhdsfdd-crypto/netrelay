@@ -4,19 +4,19 @@ import (
 	"context"
 	"net"
 
+	"github.com/bfdfhdsfdd-crypto/netrelay/tunnel"
 	log "github.com/kataras/golog"
-	"github.com/zema1/suo5/suo5"
 )
 
 type ForwardHandler struct {
-	*suo5.Suo5Client
+	*tunnel.Client
 
 	ctx context.Context
 }
 
-func NewForwardHandler(ctx context.Context, client *suo5.Suo5Client) *ForwardHandler {
+func NewForwardHandler(ctx context.Context, client *tunnel.Client) *ForwardHandler {
 	return &ForwardHandler{
-		Suo5Client: client,
+		Client: client,
 	}
 }
 
@@ -25,7 +25,7 @@ func (f *ForwardHandler) Handle(conn net.Conn) error {
 
 	log.Infof("starting forwarding connection to: %s", f.Config.ForwardTarget)
 
-	streamRW := suo5.NewSuo5Conn(f.ctx, f.Suo5Client)
+	streamRW := tunnel.NewConn(f.ctx, f.Client)
 	err := streamRW.ConnectMultiplex(f.Config.ForwardTarget)
 	if err != nil {
 		log.Warnf("failed to connect to target: %v", err)

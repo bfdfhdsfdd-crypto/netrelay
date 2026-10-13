@@ -1,4 +1,4 @@
-name: Release suo5
+name: Release NetRelay
 
 on:
   push:
@@ -20,19 +20,19 @@ jobs:
         include:
           - os: windows
             arch: amd64
-            output: suo5-windows-amd64.exe
+            output: netrelay-windows-amd64.exe
           - os: darwin
             arch: amd64
-            output: suo5-darwin-amd64
+            output: netrelay-darwin-amd64
           - os: darwin
             arch: arm64
-            output: suo5-darwin-arm64
+            output: netrelay-darwin-arm64
           - os: linux
             arch: amd64
-            output: suo5-linux-amd64
+            output: netrelay-linux-amd64
           - os: linux
             arch: arm64
-            output: suo5-linux-arm64
+            output: netrelay-linux-arm64
     runs-on: ubuntu-latest
     env:
       CGO_ENABLED: 0
@@ -45,7 +45,7 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version: '1.26.5'
-      - run: go build -trimpath --tags "neoreg suo5" -ldflags "-w -s -extldflags '-static' -X main.Version=${{ github.ref_name }}" -o target/${{ matrix.output }}
+      - run: go build -trimpath -ldflags "-w -s -extldflags '-static' -X main.Version=${{ github.ref_name }}" -o target/${{ matrix.output }}
       - uses: actions/upload-artifact@v6
         with:
           name: target-binary-${{ matrix.os }}-${{ matrix.arch }}
@@ -59,14 +59,14 @@ jobs:
         include:
           - os: windows-latest
             platform: windows/amd64
-            output: suo5-gui-windows.exe
+            output: netrelay-gui-windows.exe
           - os: macos-latest
             platform: darwin/universal
             # wails bug, mac 的 output file 不生效, 先用这个保证能用
-            output: suo5
+            output: netrelay
           - os: ubuntu-latest
             platform: linux/amd64
-            output: suo5-gui-linux
+            output: netrelay-gui-linux
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
@@ -126,9 +126,9 @@ jobs:
       - run: ls -al target && ls -R target/
       - working-directory: target
         run: |
-          rm -rf suo5-amd64-installer.exe
-          rm -rf suo5.pkg
-          mv suo5.app.zip suo5-gui-darwin.app.zip
+          rm -rf netrelay-amd64-installer.exe
+          rm -rf netrelay.pkg
+          mv netrelay.app.zip netrelay-gui-darwin.app.zip
       - run: ls -al target && ls -R target/ && file target/
       - uses: actions/upload-artifact@v6
         with:

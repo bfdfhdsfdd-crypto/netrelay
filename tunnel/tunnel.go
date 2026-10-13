@@ -1,4 +1,4 @@
-package suo5
+package tunnel
 
 import (
 	"bytes"
@@ -18,7 +18,7 @@ type TunnelConn struct {
 	readChan      chan map[string][]byte
 	readBuf       bytes.Buffer
 	remoteWrite   IdWriteFunc
-	config        *Suo5Config
+	config        *Config
 	lastHaveWrite atomic.Bool
 	closed        atomic.Bool
 	onClose       []func()
@@ -26,7 +26,7 @@ type TunnelConn struct {
 	cancel        func()
 }
 
-func NewTunnelConn(id string, config *Suo5Config, remoteWrite IdWriteFunc) *TunnelConn {
+func NewTunnelConn(id string, config *Config, remoteWrite IdWriteFunc) *TunnelConn {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &TunnelConn{
 		id:          id,

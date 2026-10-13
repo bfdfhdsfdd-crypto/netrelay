@@ -9,19 +9,19 @@ import (
 	"github.com/go-gost/gosocks5/server"
 	"github.com/pkg/errors"
 
+	"github.com/bfdfhdsfdd-crypto/netrelay/tunnel"
 	"github.com/go-gost/gosocks5"
 	log "github.com/kataras/golog"
-	"github.com/zema1/suo5/suo5"
 )
 
 type Socks5Handler struct {
-	*suo5.Suo5Client
+	*tunnel.Client
 
 	ctx      context.Context
 	selector gosocks5.Selector
 }
 
-func NewSocks5Handler(ctx context.Context, client *suo5.Suo5Client) *Socks5Handler {
+func NewSocks5Handler(ctx context.Context, client *tunnel.Client) *Socks5Handler {
 	selector := server.DefaultSelector
 	if !client.Config.NoAuth() {
 		selector = server.NewServerSelector([]*url.Userinfo{
@@ -30,9 +30,9 @@ func NewSocks5Handler(ctx context.Context, client *suo5.Suo5Client) *Socks5Handl
 	}
 
 	return &Socks5Handler{
-		ctx:        ctx,
-		Suo5Client: client,
-		selector:   selector,
+		ctx:      ctx,
+		Client:   client,
+		selector: selector,
 	}
 }
 
@@ -65,7 +65,7 @@ func (m *Socks5Handler) Handle(conn net.Conn) error {
 }
 
 func (m *Socks5Handler) handleConnect(conn net.Conn, sockReq *gosocks5.Request) {
-	streamRW := suo5.NewSuo5Conn(m.ctx, m.Suo5Client)
+	streamRW := tunnel.NewConn(m.ctx, m.Client)
 	err := streamRW.ConnectMultiplex(sockReq.Addr.String())
 	if err != nil {
 		if sockReq.Addr.String() == "127.0.0.1:0" {
@@ -91,11 +91,11 @@ func (m *Socks5Handler) handleConnect(conn net.Conn, sockReq *gosocks5.Request) 
 
 func ReplyError(conn net.Conn, err error) {
 	var rep *gosocks5.Reply
-	if errors.Is(err, suo5.ErrHostUnreachable) {
+	if errors.Is(err, tunnel.ErrHostUnreachable) {
 		rep = gosocks5.NewReply(gosocks5.HostUnreachable, nil)
-	} else if errors.Is(err, suo5.ErrDialFailed) {
+	} else if errors.Is(err, tunnel.ErrDialFailed) {
 		rep = gosocks5.NewReply(gosocks5.Failure, nil)
-	} else if errors.Is(err, suo5.ErrConnRefused) {
+	} else if errors.Is(err, tunnel.ErrConnRefused) {
 		rep = gosocks5.NewReply(gosocks5.ConnRefused, nil)
 	} else {
 		rep = gosocks5.NewReply(gosocks5.Failure, nil)

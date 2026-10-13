@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SUO5_BIN=${SUO5_BIN:-./suo5_test}
+NETRELAY_BIN=${NETRELAY_BIN:-./netrelay_test}
 MBTEST_BIN=${MBTEST_BIN:-./mbtest}
 NODE_SERVER=${NODE_SERVER:-assets/nodejs/suo5.js}
 LOG_DIR=${RUNNER_TEMP:-/tmp}/suo5-node-tests
@@ -61,7 +61,7 @@ start_client() {
   local mode=$1
   local port=$2
   local log="$LOG_DIR/client-${mode}.log"
-  "$SUO5_BIN" -debug -t http://127.0.0.1:8080/ -mode "$mode" \
+  "$NETRELAY_BIN" -debug -t http://127.0.0.1:8080/ -mode "$mode" \
     --retry 0 -l "127.0.0.1:${port}" >"$log" 2>&1 &
   CLIENT_PID=$!
   if ! wait_port "$port"; then

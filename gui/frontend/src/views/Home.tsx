@@ -5,8 +5,8 @@ import {CircleStop, FolderInput, Import, Loader, Settings, Zap} from "lucide-rea
 import AdvancedOption from "@/views/Advanced";
 import AlertMessage from "@/views/AlertMessage";
 import {useEffect, useState} from "react";
-import {suo5} from "../../wailsjs/go/models";
-import {DefaultSuo5Config, ExportConfig, ImportConfig, RunSuo5WithConfig, Stop} from "../../wailsjs/go/main/App";
+import {tunnel} from "../../wailsjs/go/models";
+import {DefaultConfig, ExportConfig, ImportConfig, RunWithConfig, Stop} from "../../wailsjs/go/main/App";
 import {Form, FormControl, FormField, FormItem, FormLabel,} from "@/components/ui/form"
 import {toast} from "sonner"
 
@@ -20,7 +20,7 @@ import Footer from "@/views/Footer";
 
 export default function Home() {
   const [openAdvanced, setOpenAdvanced] = useState(false);
-  const [config, setConfig] = useState<suo5.Suo5Config>();
+  const [config, setConfig] = useState<tunnel.Config>();
   const [status, setStatus] = useState<ConnectStatus>(ConnectStatus.INITIAL);
   const [connectDisabled, setConnectDisabled] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
@@ -64,7 +64,7 @@ export default function Home() {
     form.setValue('forward_target', '')
   }, [watchedFeature]);
 
-  const updateFormValue = (new_config: suo5.Suo5Config) => {
+  const updateFormValue = (new_config: tunnel.Config) => {
     Object.keys(FormSchema.innerType().shape).forEach((key) => {
       if (new_config[key] !== undefined) {
         // @ts-ignore
@@ -86,10 +86,10 @@ export default function Home() {
 
     await new Promise(r => setTimeout(r, 1000));
 
-    const finial_config: suo5.Suo5Config = Object.assign({}, config, data)
+    const finial_config: tunnel.Config = Object.assign({}, config, data)
     setConfig(_ => finial_config)
     console.log('final', finial_config)
-    await RunSuo5WithConfig(finial_config)
+    await RunWithConfig(finial_config)
   }
 
   const onFormError = (errors: any) => {
@@ -158,7 +158,7 @@ export default function Home() {
     setOpenAdvanced(true)
   }
 
-  const onAdvancedSubmit = async (data: suo5.Suo5Config) => {
+  const onAdvancedSubmit = async (data: tunnel.Config) => {
     setConfig(data)
     setOpenAdvanced(false)
   }
@@ -181,7 +181,7 @@ export default function Home() {
     e.preventDefault()
 
     const currentFormValues = form.getValues();
-    const configToExport = Object.assign({}, config || {}, currentFormValues) as suo5.Suo5Config;
+    const configToExport = Object.assign({}, config || {}, currentFormValues) as tunnel.Config;
 
     try {
       await ExportConfig(configToExport)
@@ -192,7 +192,7 @@ export default function Home() {
   }
 
   useEffect(() => {
-    DefaultSuo5Config().then((defaultConfig) => {
+    DefaultConfig().then((defaultConfig) => {
       // defaultConfig.target = 'http://localhost:8011/tomcat_test_war_exploded/suo5_new.jsp'
       setConfig(defaultConfig)
       updateFormValue(defaultConfig)

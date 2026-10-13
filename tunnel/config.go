@@ -1,4 +1,4 @@
-package suo5
+package tunnel
 
 import (
 	"context"
@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bfdfhdsfdd-crypto/netrelay/tpl"
 	"github.com/gobwas/glob"
-	"github.com/zema1/suo5/tpl"
 )
 
 var (
@@ -22,7 +22,7 @@ var (
 	DefaultBufferSize          = 1024 * 64
 )
 
-type Suo5Config struct {
+type Config struct {
 	Method           string         `json:"method"`
 	Listen           string         `json:"listen"`
 	Target           string         `json:"target"`
@@ -59,8 +59,8 @@ type Suo5Config struct {
 	GuiLog                  io.Writer                            `json:"-"`
 }
 
-func DefaultSuo5Config() *Suo5Config {
-	return &Suo5Config{
+func DefaultConfig() *Config {
+	return &Config{
 		Method:           http.MethodPost,
 		Listen:           "127.0.0.1:1111",
 		Target:           "",
@@ -84,7 +84,7 @@ func DefaultSuo5Config() *Suo5Config {
 	}
 }
 
-func (conf *Suo5Config) Parse() error {
+func (conf *Config) Parse() error {
 	conf.Target = strings.TrimSpace(conf.Target)
 
 	if conf.Timeout <= 0 {
@@ -125,7 +125,7 @@ func (conf *Suo5Config) Parse() error {
 	return nil
 }
 
-func (conf *Suo5Config) parseExcludeDomain() error {
+func (conf *Config) parseExcludeDomain() error {
 	conf.ExcludeGlobs = make([]glob.Glob, 0)
 	for _, domain := range conf.ExcludeDomain {
 		g, err := glob.Compile(domain)
@@ -137,7 +137,7 @@ func (conf *Suo5Config) parseExcludeDomain() error {
 	return nil
 }
 
-func (conf *Suo5Config) parseHeader() error {
+func (conf *Config) parseHeader() error {
 	conf.Header = make(http.Header)
 	for _, value := range conf.RawHeader {
 		if value == "" {
@@ -163,7 +163,7 @@ func (conf *Suo5Config) parseHeader() error {
 	return nil
 }
 
-func (conf *Suo5Config) HeaderString() string {
+func (conf *Config) HeaderString() string {
 	ret := ""
 	for k := range conf.Header {
 		ret += fmt.Sprintf("\n%s: %s", k, conf.Header.Get(k))
@@ -171,15 +171,15 @@ func (conf *Suo5Config) HeaderString() string {
 	return ret
 }
 
-func (conf *Suo5Config) NoAuth() bool {
+func (conf *Config) NoAuth() bool {
 	return conf.Username == "" && conf.Password == ""
 }
 
-func (conf *Suo5Config) TimeoutTime() time.Duration {
+func (conf *Config) TimeoutTime() time.Duration {
 	return time.Duration(conf.Timeout) * time.Second
 }
 
-func (conf *Suo5Config) RequestHeader() http.Header {
+func (conf *Config) RequestHeader() http.Header {
 	header := conf.Header.Clone()
 	if header.Get("User-Agent") == "" {
 		header.Set("User-Agent", RandUserAgent())
@@ -198,7 +198,7 @@ func (conf *Suo5Config) RequestHeader() http.Header {
 	return header
 }
 
-func (conf *Suo5Config) NewRequest(ctx context.Context, body io.Reader, contentLength int64) *http.Request {
+func (conf *Config) NewRequest(ctx context.Context, body io.Reader, contentLength int64) *http.Request {
 	req, err := http.NewRequestWithContext(ctx, conf.Method, conf.GetTarget(), body)
 	if err != nil {
 		panic(err)
@@ -208,7 +208,7 @@ func (conf *Suo5Config) NewRequest(ctx context.Context, body io.Reader, contentL
 	return req
 }
 
-func (conf *Suo5Config) GetTarget() string {
+func (conf *Config) GetTarget() string {
 	target := conf.Target
 	if strings.Contains(target, "{rand}") {
 		target = strings.ReplaceAll(target, "{rand}", tpl.RandWord())

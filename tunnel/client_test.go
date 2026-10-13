@@ -1,4 +1,4 @@
-package suo5
+package tunnel
 
 import (
 	"bytes"
@@ -9,7 +9,7 @@ import (
 )
 
 func TestPipeWritesDataReturnedWithEOF(t *testing.T) {
-	client := &Suo5Client{
+	client := &Client{
 		bytesPool: &sync.Pool{New: func() any { return make([]byte, 64) }},
 	}
 	reader := &dataAndErrorReader{data: []byte("final bytes"), err: io.EOF}
@@ -25,7 +25,7 @@ func TestPipeWritesDataReturnedWithEOF(t *testing.T) {
 }
 
 func TestPipeRejectsShortWrite(t *testing.T) {
-	client := &Suo5Client{
+	client := &Client{
 		bytesPool: &sync.Pool{New: func() any { return make([]byte, 64) }},
 	}
 

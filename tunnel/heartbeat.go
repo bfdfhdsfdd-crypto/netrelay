@@ -1,4 +1,4 @@
-package suo5
+package tunnel
 
 import (
 	"context"
@@ -14,7 +14,7 @@ type RawReadWriteCloser interface {
 	WriteRaw(p []byte, noDelay bool) (n int, err error)
 }
 
-func NewHeartbeatRW(rw RawReadWriteCloser, id string, conf *Suo5Config) io.ReadWriteCloser {
+func NewHeartbeatRW(rw RawReadWriteCloser, id string, conf *Config) io.ReadWriteCloser {
 	ctx, cancel := context.WithCancel(context.Background())
 	h := &heartbeatRW{
 		rw:     rw,
@@ -28,7 +28,7 @@ func NewHeartbeatRW(rw RawReadWriteCloser, id string, conf *Suo5Config) io.ReadW
 
 type heartbeatRW struct {
 	id            string
-	config        *Suo5Config
+	config        *Config
 	rw            RawReadWriteCloser
 	lastHaveWrite atomic.Bool
 	cancel        func()

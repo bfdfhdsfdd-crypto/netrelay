@@ -1,0 +1,6 @@
+.git
+.github
+assets
+gui
+tests
+*.md

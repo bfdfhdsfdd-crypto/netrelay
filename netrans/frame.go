@@ -10,6 +10,7 @@ import (
 )
 
 const maxFrameSize = 32 * 1024 * 1024
+const frameEncodeChunkSize = 4092
 
 type DataFrame struct {
 	Obs    []byte
@@ -29,11 +30,6 @@ func NewDataFrame(data []byte) *DataFrame {
 
 func (d *DataFrame) MarshalBinaryBase64() []byte {
 	encodedDataLength := base64.RawURLEncoding.EncodedLen(len(d.Data))
-	encodedData := make([]byte, len(d.Data))
-	for i, b := range d.Data {
-		encodedData[i] = b ^ d.Obs[i%2]
-	}
-
 	var header [6]byte
 	copy(header[:2], d.Obs)
 	binary.BigEndian.PutUint32(header[2:], uint32(encodedDataLength))
@@ -43,7 +39,24 @@ func (d *DataFrame) MarshalBinaryBase64() []byte {
 
 	result := make([]byte, 8+encodedDataLength)
 	base64.RawURLEncoding.Encode(result[:8], header[:])
-	base64.RawURLEncoding.Encode(result[8:], encodedData)
+
+	var transformed [frameEncodeChunkSize]byte
+	encodedOffset := 0
+	for offset := 0; offset < len(d.Data); {
+		chunkSize := min(frameEncodeChunkSize, len(d.Data)-offset)
+		chunk := transformed[:chunkSize]
+		copy(chunk, d.Data[offset:offset+chunkSize])
+		for i := range chunk {
+			chunk[i] ^= d.Obs[(offset+i)%2]
+		}
+		chunkEncodedLength := base64.RawURLEncoding.EncodedLen(chunkSize)
+		base64.RawURLEncoding.Encode(
+			result[8+encodedOffset:8+encodedOffset+chunkEncodedLength],
+			chunk,
+		)
+		offset += chunkSize
+		encodedOffset += chunkEncodedLength
+	}
 	return result
 }
 
@@ -94,8 +107,8 @@ func ReadFrameBase64(r io.Reader) (*DataFrame, error) {
 	// Read the first part (length and obs)
 	// The first part is base64 encoded from 6 bytes (4 bytes length + 2 bytes obs).
 	// Base64 encoding 6 bytes results in 8 bytes.
-	headerBase64 := make([]byte, 8)
-	n, err := io.ReadFull(r, headerBase64)
+	var headerBase64 [8]byte
+	n, err := io.ReadFull(r, headerBase64[:])
 	if err != nil {
 		return nil, errors.New("failed to read header base64: " + err.Error())
 	}
@@ -103,7 +116,7 @@ func ReadFrameBase64(r io.Reader) (*DataFrame, error) {
 		return nil, errors.New("incomplete header base64 read")
 	}
 	var headerBytes [6]byte
-	n, err = base64.RawURLEncoding.Decode(headerBytes[:], headerBase64)
+	n, err = base64.RawURLEncoding.Decode(headerBytes[:], headerBase64[:])
 	if err != nil {
 		return nil, errors.New("failed to decode header base64: " + err.Error())
 	}
@@ -120,18 +133,15 @@ func ReadFrameBase64(r io.Reader) (*DataFrame, error) {
 	if uint64(dataLength) > uint64(maxEncodedLength) {
 		return nil, fmt.Errorf("encoded frame is too big, %d", dataLength)
 	}
+	if dataLength%4 == 1 {
+		return nil, errors.New("invalid base64 frame length")
+	}
 
-	buf := make([]byte, dataLength)
-	_, err = io.ReadFull(r, buf)
+	dataBytes := make([]byte, base64.RawURLEncoding.DecodedLen(int(dataLength)))
+	_, err = io.ReadFull(base64.NewDecoder(base64.RawURLEncoding, io.LimitReader(r, int64(dataLength))), dataBytes)
 	if err != nil {
-		return nil, errors.New("failed to read data base64: " + err.Error())
+		return nil, errors.New("failed to read or decode data base64: " + err.Error())
 	}
-	dataBytes := make([]byte, base64.RawURLEncoding.DecodedLen(len(buf)))
-	decodedLength, err := base64.RawURLEncoding.Decode(dataBytes, buf)
-	if err != nil {
-		return nil, errors.New("failed to decode data base64: " + err.Error())
-	}
-	dataBytes = dataBytes[:decodedLength]
 	// Decode the data using obs
 	for i := 0; i < len(dataBytes); i++ {
 		dataBytes[i] = dataBytes[i] ^ obs[i%2]

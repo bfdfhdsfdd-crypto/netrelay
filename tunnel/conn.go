@@ -1,10 +1,10 @@
-package suo5
+package tunnel
 
 import (
 	"context"
+	"github.com/bfdfhdsfdd-crypto/netrelay/netrans"
 	"github.com/kataras/golog"
 	"github.com/pkg/errors"
-	"github.com/zema1/suo5/netrans"
 	"io"
 )
 
@@ -15,24 +15,24 @@ var (
 	ErrFactoryStopped  = errors.New("factory has stopped")
 )
 
-func NewSuo5Conn(ctx context.Context, client *Suo5Client) *Suo5Conn {
-	return &Suo5Conn{
-		ctx:        ctx,
-		Suo5Client: client,
+func NewConn(ctx context.Context, client *Client) *Conn {
+	return &Conn{
+		ctx:    ctx,
+		Client: client,
 	}
 }
 
-type Suo5Conn struct {
+type Conn struct {
 	io.ReadWriteCloser
-	*Suo5Client
+	*Client
 
 	ctx context.Context
 }
 
-func (suo5 *Suo5Conn) ConnectMultiplex(address string) error {
+func (c *Conn) ConnectMultiplex(address string) error {
 	id := RandString(8)
 	golog.Debugf("trying to connect to %s with id: %s", address, id)
-	plexConn, err := suo5.Spawn(id, address)
+	plexConn, err := c.Spawn(id, address)
 	if err != nil {
 		return err
 	}
@@ -49,12 +49,12 @@ func (suo5 *Suo5Conn) ConnectMultiplex(address string) error {
 	// }
 
 	streamRW := io.ReadWriteCloser(plexConn)
-	if !suo5.Config.DisableHeartbeat {
-		streamRW = NewHeartbeatRW(streamRW.(RawReadWriteCloser), id, suo5.Config)
+	if !c.Config.DisableHeartbeat {
+		streamRW = NewHeartbeatRW(streamRW.(RawReadWriteCloser), id, c.Config)
 	}
-	if suo5.Config.OnSpeedInfo != nil {
+	if c.Config.OnSpeedInfo != nil {
 		streamRW = netrans.NewSpeedTrackingReadWriteCloser(streamRW)
 	}
-	suo5.ReadWriteCloser = streamRW
+	c.ReadWriteCloser = streamRW
 	return nil
 }

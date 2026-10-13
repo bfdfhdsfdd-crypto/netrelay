@@ -1,4 +1,4 @@
-module github.com/zema1/suo5
+module github.com/bfdfhdsfdd-crypto/netrelay
 
 go 1.26.5
 
@@ -32,5 +32,3 @@ require (
 	golang.org/x/sys v0.31.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-//replace github.com/zema1/suo5 => ./

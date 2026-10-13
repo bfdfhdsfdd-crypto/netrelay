@@ -1,4 +1,4 @@
-package suo5
+package tunnel
 
 import (
 	"bytes"
@@ -16,23 +16,23 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bfdfhdsfdd-crypto/netrelay/netrans"
 	"github.com/chainreactors/proxyclient"
 	log "github.com/kataras/golog"
 	utls "github.com/refraction-networking/utls"
 	"github.com/zema1/rawhttp"
-	"github.com/zema1/suo5/netrans"
 )
 
-type Suo5Client struct {
+type Client struct {
 	StreamFactory
-	Config *Suo5Config
+	Config *Config
 
 	ctx       context.Context
 	speeder   *netrans.SpeedCaculator
 	bytesPool *sync.Pool
 }
 
-func Connect(ctx context.Context, config *Suo5Config) (*Suo5Client, error) {
+func Connect(ctx context.Context, config *Config) (*Client, error) {
 	err := config.Parse()
 	if err != nil {
 		return nil, err
@@ -107,7 +107,7 @@ func Connect(ctx context.Context, config *Suo5Config) (*Suo5Client, error) {
 				log.Errorf("handshake failed: %s, retrying %d/%d", err, i+1, retry)
 			}
 		} else {
-			log.Infof("suo5 is going to work on %s mode", config.Mode)
+			log.Infof("NetRelay is going to work on %s mode", config.Mode)
 			break
 		}
 	}
@@ -175,7 +175,7 @@ func Connect(ctx context.Context, config *Suo5Config) (*Suo5Client, error) {
 		},
 	}
 
-	suo5Client := &Suo5Client{
+	client := &Client{
 		StreamFactory: factory,
 		ctx:           ctx,
 		Config:        config,
@@ -183,10 +183,10 @@ func Connect(ctx context.Context, config *Suo5Config) (*Suo5Client, error) {
 		bytesPool:     pool,
 	}
 
-	return suo5Client, nil
+	return client, nil
 }
 
-func checkConnectMode(ctx context.Context, config *Suo5Config, jar http.CookieJar) error {
+func checkConnectMode(ctx context.Context, config *Config, jar http.CookieJar) error {
 RetryApache:
 	randLen := rand.Intn(4096)
 	if randLen <= 32 {
@@ -315,7 +315,7 @@ RetryApache:
 	return nil
 }
 
-func (m *Suo5Client) Pipe(r io.Reader, w io.Writer) error {
+func (m *Client) Pipe(r io.Reader, w io.Writer) error {
 	buf := m.bytesPool.Get().([]byte)
 	defer m.bytesPool.Put(buf) //nolint:staticcheck
 	for {
@@ -335,7 +335,7 @@ func (m *Suo5Client) Pipe(r io.Reader, w io.Writer) error {
 	}
 }
 
-func (m *Suo5Client) DualPipe(localConn, remoteWrapper io.ReadWriteCloser, addr string) {
+func (m *Client) DualPipe(localConn, remoteWrapper io.ReadWriteCloser, addr string) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 

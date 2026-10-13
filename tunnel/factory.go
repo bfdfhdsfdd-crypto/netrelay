@@ -1,12 +1,12 @@
-package suo5
+package tunnel
 
 import (
 	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"github.com/bfdfhdsfdd-crypto/netrelay/netrans"
 	log "github.com/kataras/golog"
-	"github.com/zema1/suo5/netrans"
 	"golang.org/x/time/rate"
 	"io"
 	"sync"
@@ -34,7 +34,7 @@ type IdWriteFunc func(idata *IdData) error
 
 type BaseStreamFactory struct {
 	once    sync.Once
-	config  *Suo5Config
+	config  *Config
 	closeMu sync.Mutex
 	closed  atomic.Bool
 	limiter *rate.Limiter
@@ -51,7 +51,7 @@ type BaseStreamFactory struct {
 	cancel          func()
 }
 
-func NewBaseStreamFactory(rootCtx context.Context, config *Suo5Config) *BaseStreamFactory {
+func NewBaseStreamFactory(rootCtx context.Context, config *Config) *BaseStreamFactory {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	limiter := rate.NewLimiter(rate.Limit(config.ClassicPollQPS), config.ClassicPollQPS)

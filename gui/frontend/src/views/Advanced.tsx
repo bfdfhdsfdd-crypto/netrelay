@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {suo5} from "../../wailsjs/go/models"
+import {tunnel} from "../../wailsjs/go/models"
 import {Checkbox} from "@/components/ui/checkbox";
 import {Input} from "@/components/ui/input";
 import {Textarea} from "@/components/ui/textarea";
@@ -20,9 +20,9 @@ import {Form, FormControl, FormField, FormItem, FormLabel} from "@/components/ui
 
 interface AdvancedOptionsProps {
   open: boolean
-  config: suo5.Suo5Config
+  config: tunnel.Config
   onClose: () => void
-  onSubmit: (data: suo5.Suo5Config) => void
+  onSubmit: (data: tunnel.Config) => void
 }
 
 

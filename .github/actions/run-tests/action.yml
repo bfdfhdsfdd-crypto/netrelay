@@ -1,5 +1,5 @@
-name: Run Suo5 Tests
-description: Run standard suo5 tests with optional no-gzip flag
+name: Run NetRelay Tests
+description: Run standard NetRelay tests with optional no-gzip flag
 inputs:
   no_gzip:
     description: "Add -no-gzip flag to tests"
@@ -71,7 +71,7 @@ runs:
       run: |
         set -ex
         ./helper ready -u ${{ inputs.direct_url }} -t 60
-        chmod +x ./suo5_test ./mbtest
+        chmod +x ./netrelay_test ./mbtest
 
         SRV1_ID=$(docker compose ps -q srv1)
         NETWORK=$(docker inspect "$SRV1_ID" --format '{{range $name, $_ := .NetworkSettings.Networks}}{{$name}}{{end}}')
@@ -127,7 +127,7 @@ runs:
             if [ -n "$dirty" ] && [ "$dirty" != "0" ]; then
               DIRTY_FLAG="-jk $dirty"
             fi
-            ./suo5_test -debug -t "$url" -T "$REMOTE_TEST_URL" -mode "$mode" $GZIP_FLAG --retry $retry -r "$redirect" $DIRTY_FLAG
+            ./netrelay_test -debug -t "$url" -T "$REMOTE_TEST_URL" -mode "$mode" $GZIP_FLAG --retry $retry -r "$redirect" $DIRTY_FLAG
           fi
         }
 
@@ -184,15 +184,15 @@ runs:
           TEST_PORT=11120
 
           for mode in $RELIABILITY_MODES; do
-            CLIENT_LOG="suo5-reliability-${mode}.log"
-            ./suo5_test -debug -t "${{ inputs.direct_url }}" -mode "$mode" \
+            CLIENT_LOG="netrelay-reliability-${mode}.log"
+            ./netrelay_test -debug -t "${{ inputs.direct_url }}" -mode "$mode" \
               $GZIP_FLAG --retry 0 -l "127.0.0.1:${TEST_PORT}" >"$CLIENT_LOG" 2>&1 &
             CLIENT_PID=$!
 
             ready=false
             for _ in $(seq 1 50); do
               if ! kill -0 "$CLIENT_PID" 2>/dev/null; then
-                echo "suo5 client exited before reliability tests"
+                echo "NetRelay client exited before reliability tests"
                 cat "$CLIENT_LOG"
                 exit 1
               fi
@@ -203,7 +203,7 @@ runs:
               sleep 0.1
             done
             if [ "$ready" != "true" ]; then
-              echo "suo5 client did not listen on ${TEST_PORT}"
+              echo "NetRelay client did not listen on ${TEST_PORT}"
               cat "$CLIENT_LOG"
               exit 1
             fi

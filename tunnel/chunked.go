@@ -1,4 +1,4 @@
-package suo5
+package tunnel
 
 import (
 	"bytes"
@@ -13,10 +13,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bfdfhdsfdd-crypto/netrelay/netrans"
 	log "github.com/kataras/golog"
 	"github.com/pkg/errors"
 	"github.com/zema1/rawhttp"
-	"github.com/zema1/suo5/netrans"
 )
 
 type FullChunkedStreamFactory struct {
@@ -27,7 +27,7 @@ type FullChunkedStreamFactory struct {
 	wcs       map[string]io.WriteCloser
 }
 
-func NewFullChunkedStreamFactory(ctx context.Context, config *Suo5Config, rawClient *rawhttp.Client) StreamFactory {
+func NewFullChunkedStreamFactory(ctx context.Context, config *Config, rawClient *rawhttp.Client) StreamFactory {
 	s := &FullChunkedStreamFactory{
 		BaseStreamFactory: NewBaseStreamFactory(ctx, config),
 		rawClient:         rawClient,
@@ -147,7 +147,7 @@ type HalfChunkedStreamFactory struct {
 	rcs    map[string]io.ReadCloser
 }
 
-func NewHalfChunkedStreamFactory(ctx context.Context, config *Suo5Config, client *http.Client) StreamFactory {
+func NewHalfChunkedStreamFactory(ctx context.Context, config *Config, client *http.Client) StreamFactory {
 	s := &HalfChunkedStreamFactory{
 		BaseStreamFactory: NewBaseStreamFactory(ctx, config),
 		client:            client,

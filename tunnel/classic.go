@@ -1,4 +1,4 @@
-package suo5
+package tunnel
 
 import (
 	"bytes"
@@ -20,7 +20,7 @@ type ClassicStreamFactory struct {
 	client *http.Client
 }
 
-func NewClassicStreamFactory(ctx context.Context, config *Suo5Config, client *http.Client) StreamFactory {
+func NewClassicStreamFactory(ctx context.Context, config *Config, client *http.Client) StreamFactory {
 	s := &ClassicStreamFactory{
 		BaseStreamFactory: NewBaseStreamFactory(ctx, config),
 		client:            client,

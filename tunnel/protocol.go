@@ -1,4 +1,4 @@
-package suo5
+package tunnel
 
 import (
 	"bytes"
@@ -8,7 +8,7 @@ import (
 	"math/rand"
 	"strconv"
 
-	"github.com/zema1/suo5/netrans"
+	"github.com/bfdfhdsfdd-crypto/netrelay/netrans"
 )
 
 type ConnectionType string
@@ -103,26 +103,32 @@ func NewActionHeartbeat(id string) map[string][]byte {
 // 定义一个最简的序列化协议，k,v 交替，每一项是len+data
 // 其中 k 最长 255，v 最长 MaxUInt32
 func Marshal(m map[string][]byte) []byte {
-	var buf bytes.Buffer
-	u32Buf := make([]byte, 4)
+	size := 0
 	for k, v := range m {
-		buf.WriteByte(byte(len(k)))
-		buf.WriteString(k)
-		binary.BigEndian.PutUint32(u32Buf, uint32(len(v)))
-		buf.Write(u32Buf)
-		buf.Write(v)
+		size += 1 + len(k) + 4 + len(v)
 	}
-	return buf.Bytes()
+
+	buf := make([]byte, size)
+	offset := 0
+	for k, v := range m {
+		buf[offset] = byte(len(k))
+		offset++
+		offset += copy(buf[offset:], k)
+		binary.BigEndian.PutUint32(buf[offset:], uint32(len(v)))
+		offset += 4
+		offset += copy(buf[offset:], v)
+	}
+	return buf
 }
 
 func Unmarshal(bs []byte) (map[string][]byte, error) {
 	m := make(map[string][]byte)
 	total := len(bs)
-	for i := 0; i < total-1; {
+	for i := 0; i < total; {
 		kLen := int(bs[i])
 		i += 1
 
-		if i+kLen >= total {
+		if i+kLen > total {
 			return nil, fmt.Errorf("unexpected eof when read key")
 		}
 		key := string(bs[i : i+kLen])
@@ -131,12 +137,13 @@ func Unmarshal(bs []byte) (map[string][]byte, error) {
 		if i+4 > total {
 			return nil, fmt.Errorf("unexpected eof when read value size")
 		}
-		vLen := int(binary.BigEndian.Uint32(bs[i : i+4]))
+		valueLength := binary.BigEndian.Uint32(bs[i : i+4])
 		i += 4
 
-		if i+vLen > total {
+		if uint64(valueLength) > uint64(total-i) {
 			return nil, fmt.Errorf("unexpected eof when read value")
 		}
+		vLen := int(valueLength)
 		value := bs[i : i+vLen]
 		m[key] = value
 		i += vLen

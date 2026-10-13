@@ -12,13 +12,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bfdfhdsfdd-crypto/netrelay/tunnel"
 	"github.com/go-gost/gosocks5"
 	"github.com/go-gost/gosocks5/client"
 	"github.com/go-gost/gosocks5/server"
 	log "github.com/kataras/golog"
 	"github.com/kataras/pio"
 	"github.com/pkg/errors"
-	"github.com/zema1/suo5/suo5"
 )
 
 func InitDefaultLog(writer io.Writer) {
@@ -50,7 +50,7 @@ func InitDefaultLog(writer io.Writer) {
 	})
 }
 
-func Run(ctx context.Context, config *suo5.Suo5Config) error {
+func Run(ctx context.Context, config *tunnel.Config) error {
 	if config.GuiLog != nil {
 		// 防止多次执行出错
 		InitDefaultLog(config.GuiLog)
@@ -61,14 +61,14 @@ func Run(ctx context.Context, config *suo5.Suo5Config) error {
 		log.SetLevel("info")
 	}
 
-	suo5Client, err := suo5.Connect(ctx, config)
+	client, err := tunnel.Connect(ctx, config)
 	if err != nil {
 		return err
 	}
 	log.Infof("starting tunnel at: %s", config.Listen)
 
 	if config.OnRemoteConnected != nil {
-		config.OnRemoteConnected(&suo5.ConnectedEvent{Mode: config.Mode})
+		config.OnRemoteConnected(&tunnel.ConnectedEvent{Mode: config.Mode})
 	}
 
 	fmt.Println()
@@ -108,15 +108,15 @@ func Run(ctx context.Context, config *suo5.Suo5Config) error {
 	var handler server.Handler
 	if config.ForwardTarget != "" {
 		// 使用 Forward 模式
-		handler = &suo5.ClientEventHandler{
-			Inner:                   NewForwardHandler(ctx, suo5Client),
+		handler = &tunnel.ClientEventHandler{
+			Inner:                   NewForwardHandler(ctx, client),
 			OnNewClientConnection:   config.OnNewClientConnection,
 			OnClientConnectionClose: config.OnClientConnectionClose,
 		}
 		log.Infof("running in forward mode, forwarding all connections to: %s", config.ForwardTarget)
 	} else {
-		handler = &suo5.ClientEventHandler{
-			Inner:                   NewSocks5Handler(ctx, suo5Client),
+		handler = &tunnel.ClientEventHandler{
+			Inner:                   NewSocks5Handler(ctx, client),
 			OnNewClientConnection:   config.OnNewClientConnection,
 			OnClientConnectionClose: config.OnClientConnectionClose,
 		}
@@ -135,7 +135,7 @@ func Run(ctx context.Context, config *suo5.Suo5Config) error {
 		time.Sleep(time.Millisecond * 500)
 		if !ok {
 			log.Errorf("tunnel created but test connection failed")
-			return fmt.Errorf("suo5 can not work on this server")
+			return fmt.Errorf("NetRelay cannot work on this server")
 		} else {
 			log.Infof("test connection succeeded, tunnel is ready")
 		}
@@ -148,7 +148,7 @@ func Run(ctx context.Context, config *suo5.Suo5Config) error {
 		}
 	}
 
-	suo5Client.Wait()
+	client.Wait()
 	log.Infof("cleanup completed, exiting")
 	return nil
 }
@@ -199,9 +199,9 @@ func testAndExit(socks5 string, remote string, timeout time.Duration) error {
 		return err
 	}
 	req.Close = true
-	ua := suo5.RandUserAgent()
+	ua := tunnel.RandUserAgent()
 	req.Header.Set("User-Agent", ua)
-	for k, v := range suo5.GetBrowserHeaders(ua) {
+	for k, v := range tunnel.GetBrowserHeaders(ua) {
 		req.Header.Set(k, v)
 	}
 	resp, err := httpClient.Do(req)

@@ -1,4 +1,4 @@
-package suo5
+package tunnel
 
 import (
 	"github.com/go-gost/gosocks5/server"

@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/bfdfhdsfdd-crypto/netrelay/ctrl"
+	"github.com/bfdfhdsfdd-crypto/netrelay/tunnel"
 	wailsRuntime "github.com/wailsapp/wails/v2/pkg/runtime"
-	"github.com/zema1/suo5/ctrl"
-	"github.com/zema1/suo5/suo5"
 	"math"
 	"net/url"
 	"os"
@@ -16,12 +16,12 @@ import (
 
 // App struct
 type App struct {
-	ctx        context.Context
-	cancel     func()
-	cancelSuo5 func()
+	ctx            context.Context
+	cancel         func()
+	cancelNetRelay func()
 
 	connCount int32
-	speed     atomic.Pointer[suo5.SpeedStatisticEvent]
+	speed     atomic.Pointer[tunnel.SpeedStatisticEvent]
 }
 
 // NewApp creates a new App application struct
@@ -49,19 +49,19 @@ func (a *App) Startup(ctx context.Context) {
 	}()
 }
 
-func (a *App) RunSuo5WithConfig(config *suo5.Suo5Config) {
+func (a *App) RunWithConfig(config *tunnel.Config) {
 	cliCtx, cancel := context.WithCancel(a.ctx)
-	a.cancelSuo5 = cancel
-	config.OnRemoteConnected = func(e *suo5.ConnectedEvent) {
+	a.cancelNetRelay = cancel
+	config.OnRemoteConnected = func(e *tunnel.ConnectedEvent) {
 		wailsRuntime.EventsEmit(a.ctx, "connected", e.Mode)
 	}
-	config.OnNewClientConnection = func(event *suo5.ClientConnectionEvent) {
+	config.OnNewClientConnection = func(event *tunnel.ClientConnectionEvent) {
 		atomic.AddInt32(&a.connCount, 1)
 	}
-	config.OnClientConnectionClose = func(event *suo5.ClientConnectCloseEvent) {
+	config.OnClientConnectionClose = func(event *tunnel.ClientConnectCloseEvent) {
 		atomic.AddInt32(&a.connCount, -1)
 	}
-	config.OnSpeedInfo = func(event *suo5.SpeedStatisticEvent) {
+	config.OnSpeedInfo = func(event *tunnel.SpeedStatisticEvent) {
 		a.speed.Store(event)
 	}
 
@@ -76,8 +76,8 @@ func (a *App) RunSuo5WithConfig(config *suo5.Suo5Config) {
 	}()
 }
 
-func (a *App) DefaultSuo5Config() *suo5.Suo5Config {
-	return suo5.DefaultSuo5Config()
+func (a *App) DefaultConfig() *tunnel.Config {
+	return tunnel.DefaultConfig()
 }
 
 func (a *App) GetStatus() *RunStatus {
@@ -96,11 +96,11 @@ func (a *App) GetStatus() *RunStatus {
 	return status
 }
 
-func (a *App) ImportConfig() (*suo5.Suo5Config, error) {
+func (a *App) ImportConfig() (*tunnel.Config, error) {
 	options := wailsRuntime.OpenDialogOptions{
 		DefaultDirectory: "",
 		DefaultFilename:  "",
-		Title:            "导入 Suo5 配置",
+		Title:            "导入 NetRelay 配置",
 		Filters: []wailsRuntime.FileFilter{
 			{
 				DisplayName: "json",
@@ -116,7 +116,7 @@ func (a *App) ImportConfig() (*suo5.Suo5Config, error) {
 	if filepath == "" {
 		return nil, nil
 	}
-	var config suo5.Suo5Config
+	var config tunnel.Config
 	data, err := os.ReadFile(filepath)
 	if err != nil {
 		return nil, err
@@ -131,8 +131,8 @@ func (a *App) ImportConfig() (*suo5.Suo5Config, error) {
 	return &config, nil
 }
 
-func (a *App) ExportConfig(config *suo5.Suo5Config) error {
-	filename := "suo5-config.json"
+func (a *App) ExportConfig(config *tunnel.Config) error {
+	filename := "netrelay-config.json"
 	if config.Target != "" {
 		u, err := url.Parse(config.Target)
 		if err == nil {
@@ -142,7 +142,7 @@ func (a *App) ExportConfig(config *suo5.Suo5Config) error {
 
 	options := wailsRuntime.SaveDialogOptions{
 		DefaultFilename: filename,
-		Title:           "导出 Suo5 配置",
+		Title:           "导出 NetRelay 配置",
 		Filters: []wailsRuntime.FileFilter{
 			{
 				DisplayName: "json",
@@ -172,15 +172,15 @@ func (a *App) Shutdown(_ context.Context) {
 	if a.cancel != nil {
 		a.cancel()
 	}
-	if a.cancelSuo5 != nil {
-		a.cancelSuo5()
+	if a.cancelNetRelay != nil {
+		a.cancelNetRelay()
 	}
 }
 
-// Stop suo5,  for frontend use
+// Stop NetRelay, for frontend use
 func (a *App) Stop() {
-	if a.cancelSuo5 != nil {
-		a.cancelSuo5()
+	if a.cancelNetRelay != nil {
+		a.cancelNetRelay()
 	}
 	a.speed.Store(nil)
 }

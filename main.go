@@ -8,12 +8,12 @@ import (
 	"os/signal"
 	"strings"
 
-	"github.com/zema1/suo5/suo5"
+	"github.com/bfdfhdsfdd-crypto/netrelay/tunnel"
 
 	// _ "github.com/chainreactors/proxyclient/extend"
+	"github.com/bfdfhdsfdd-crypto/netrelay/ctrl"
 	log "github.com/kataras/golog"
 	"github.com/urfave/cli/v2"
-	"github.com/zema1/suo5/ctrl"
 )
 
 var Version = "v0.0.0"
@@ -21,11 +21,11 @@ var Version = "v0.0.0"
 func main() {
 	ctrl.InitDefaultLog(os.Stdout)
 	app := cli.NewApp()
-	app.Name = "suo5"
+	app.Name = "netrelay"
 	app.Usage = "A high-performance http tunnel"
 	app.Version = Version
 
-	defaultConfig := suo5.DefaultSuo5Config()
+	defaultConfig := tunnel.DefaultConfig()
 	app.DisableSliceFlagSeparator = true
 
 	app.Flags = []cli.Flag{
@@ -190,7 +190,7 @@ func Action(c *cli.Context) error {
 	listen := c.String("listen")
 	target := c.String("target")
 	auth := c.String("auth")
-	mode := suo5.ConnectionType(c.String("mode"))
+	mode := tunnel.ConnectionType(c.String("mode"))
 	maxBodySize := c.Int("max-body-size")
 	timeout := c.Int("timeout")
 	debug := c.Bool("debug")
@@ -241,7 +241,7 @@ func Action(c *cli.Context) error {
 		}
 	}
 
-	config := &suo5.Suo5Config{
+	config := &tunnel.Config{
 		Listen:           listen,
 		Target:           target,
 		Username:         username,

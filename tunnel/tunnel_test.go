@@ -1,4 +1,4 @@
-package suo5
+package tunnel
 
 import (
 	"io"
@@ -143,6 +143,6 @@ func TestTunnelConnCloseUnblocksReadUnmarshal(t *testing.T) {
 	}
 }
 
-func testTunnelConfig() *Suo5Config {
-	return &Suo5Config{Timeout: 1}
+func testTunnelConfig() *Config {
+	return &Config{Timeout: 1}
 }

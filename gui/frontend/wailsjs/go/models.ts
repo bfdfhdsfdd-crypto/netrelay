@@ -19,9 +19,9 @@ export namespace main {
 
 }
 
-export namespace suo5 {
+export namespace tunnel {
 	
-	export class Suo5Config {
+	export class Config {
 	    method: string;
 	    listen: string;
 	    target: string;
@@ -46,7 +46,7 @@ export namespace suo5 {
 	    impersonate_browser: boolean;
 	
 	    static createFrom(source: any = {}) {
-	        return new Suo5Config(source);
+	        return new Config(source);
 	    }
 	
 	    constructor(source: any = {}) {
@@ -77,4 +77,3 @@ export namespace suo5 {
 	}
 
 }
-
