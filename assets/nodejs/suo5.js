@@ -520,17 +520,22 @@ function marshalBase64(dataMap) {
 class StreamReader {
     constructor(stream) {
         this.stream = stream;
-        this.buffer = Buffer.alloc(0);
+        this.chunks = [];
+        this.chunkIndex = 0;
+        this.bufferedBytes = 0;
         this.waiters = [];
         this.ended = false;
         this.error = null;
         this.onData = chunk => {
-            if (this.buffer.length + chunk.length > MAX_FRAME_SIZE + 8) {
+            if (this.bufferedBytes + chunk.length > MAX_FRAME_SIZE + 8) {
                 this.finish(new Error('request buffer limit exceeded'));
                 stream.destroy();
                 return;
             }
-            this.buffer = Buffer.concat([this.buffer, chunk]);
+            if (chunk.length > 0) {
+                this.chunks.push(chunk);
+                this.bufferedBytes += chunk.length;
+            }
             this.check();
         };
         this.onEnd = () => this.finish(new Error('EOF'));
@@ -546,7 +551,7 @@ class StreamReader {
         if (!Number.isSafeInteger(len) || len < 0 || len > MAX_FRAME_SIZE) {
             return Promise.reject(new Error('invalid read length'));
         }
-        if (this.buffer.length >= len) return Promise.resolve(this.take(len));
+        if (this.bufferedBytes >= len) return Promise.resolve(this.take(len));
         if (this.ended) return Promise.reject(this.error || new Error('EOF'));
         return new Promise((resolve, reject) => {
             this.waiters.push({ len, resolve, reject });
@@ -555,13 +560,49 @@ class StreamReader {
     }
 
     take(len) {
-        const result = this.buffer.subarray(0, len);
-        this.buffer = this.buffer.subarray(len);
+        if (len === 0) return Buffer.alloc(0);
+        const first = this.chunks[this.chunkIndex];
+        if (first.length >= len) {
+            const result = first.subarray(0, len);
+            if (first.length === len) {
+                this.dropFirstChunk();
+            } else {
+                this.chunks[this.chunkIndex] = first.subarray(len);
+            }
+            this.bufferedBytes -= len;
+            return result;
+        }
+
+        const result = Buffer.allocUnsafe(len);
+        let offset = 0;
+        while (offset < len) {
+            const chunk = this.chunks[this.chunkIndex];
+            const copied = Math.min(chunk.length, len - offset);
+            chunk.copy(result, offset, 0, copied);
+            offset += copied;
+            if (copied === chunk.length) {
+                this.dropFirstChunk();
+            } else {
+                this.chunks[this.chunkIndex] = chunk.subarray(copied);
+            }
+        }
+        this.bufferedBytes -= len;
         return result;
     }
 
+    dropFirstChunk() {
+        this.chunkIndex++;
+        if (this.chunkIndex === this.chunks.length) {
+            this.chunks = [];
+            this.chunkIndex = 0;
+        } else if (this.chunkIndex >= 64 && this.chunkIndex * 2 >= this.chunks.length) {
+            this.chunks = this.chunks.slice(this.chunkIndex);
+            this.chunkIndex = 0;
+        }
+    }
+
     check() {
-        while (this.waiters.length && this.buffer.length >= this.waiters[0].len) {
+        while (this.waiters.length && this.bufferedBytes >= this.waiters[0].len) {
             const waiter = this.waiters.shift();
             waiter.resolve(this.take(waiter.len));
         }
@@ -592,8 +633,10 @@ class StreamReader {
                 this.stream.once('error', failed);
             });
         }
-        const result = this.buffer;
-        this.buffer = Buffer.alloc(0);
+        const result = Buffer.concat(this.chunks.slice(this.chunkIndex), this.bufferedBytes);
+        this.chunks = [];
+        this.chunkIndex = 0;
+        this.bufferedBytes = 0;
         return result;
     }
 

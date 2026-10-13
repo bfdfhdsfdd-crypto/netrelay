@@ -595,7 +595,13 @@ class G
                 m["_"] = junk;
             }
 
-            MemoryStream buf = new MemoryStream();
+            int serializedLength = 0;
+            foreach (KeyValuePair<string, byte[]> kvp in m)
+            {
+                serializedLength += 1 + Encoding.UTF8.GetByteCount(kvp.Key) + 4 + kvp.Value.Length;
+            }
+
+            MemoryStream buf = new MemoryStream(serializedLength);
             foreach (KeyValuePair<string, byte[]> kvp in m)
             {
                 string key = kvp.Key;
@@ -623,26 +629,23 @@ class G
             byte[] base64Bytes = Encoding.UTF8.GetBytes(base64Data);
 
             // Create header: [2 bytes XOR key][4 bytes data length (XOR encrypted)]
-            MemoryStream headerBuf = new MemoryStream();
-            headerBuf.Write(xorKey, 0, 2);
+            byte[] header = new byte[6];
+            Buffer.BlockCopy(xorKey, 0, header, 0, xorKey.Length);
             byte[] lenBytes = U32ToBytes(base64Bytes.Length);
             for (int i = 0; i < 4; i++)
             {
                 lenBytes[i] = (byte)(lenBytes[i] ^ xorKey[i % 2]);
             }
 
-            headerBuf.Write(lenBytes, 0, 4);
-
-            byte[] header = headerBuf.ToArray();
+            Buffer.BlockCopy(lenBytes, 0, header, 2, lenBytes.Length);
             string base64Header = Base64UrlEncode(header);
             byte[] base64HeaderBytes = Encoding.UTF8.GetBytes(base64Header);
 
             // Combine header + data
-            MemoryStream result = new MemoryStream();
-            result.Write(base64HeaderBytes, 0, base64HeaderBytes.Length);
-            result.Write(base64Bytes, 0, base64Bytes.Length);
-
-            return result.ToArray();
+            byte[] result = new byte[base64HeaderBytes.Length + base64Bytes.Length];
+            Buffer.BlockCopy(base64HeaderBytes, 0, result, 0, base64HeaderBytes.Length);
+            Buffer.BlockCopy(base64Bytes, 0, result, base64HeaderBytes.Length, base64Bytes.Length);
+            return result;
         }
 
         private Dictionary<string, byte[]> UnmarshalBase64(Stream stream)
@@ -653,9 +656,9 @@ class G
             ReadFull(stream, headerBytes);
 
             byte[] header = Base64UrlDecode(Encoding.UTF8.GetString(headerBytes));
-            if (header == null || header.Length == 0)
+            if (header == null || header.Length != 6)
             {
-                return m;
+                throw new IOException("invalid header");
             }
 
             byte[] xorKey = new byte[] { header[0], header[1] };
@@ -665,7 +668,7 @@ class G
             }
 
             int dataLen = BytesToU32(CopyOfRange(header, 2, 6));
-            if (dataLen > 1024 * 1024 * 32)
+            if (dataLen < 0 || dataLen > 1024 * 1024 * 32)
             {
                 throw new IOException("invalid len");
             }
@@ -689,7 +692,7 @@ class G
                     throw new Exception("key len error");
                 }
 
-                string key = Encoding.UTF8.GetString(CopyOfRange(data, i, i + keyLen));
+                string key = Encoding.UTF8.GetString(data, i, keyLen);
                 i += keyLen;
 
                 if (i + 4 > data.Length)
@@ -697,14 +700,18 @@ class G
                     throw new Exception("value len error");
                 }
 
-                int valueLen = BytesToU32(CopyOfRange(data, i, i + 4));
+                int valueLen = ((data[i] & 0xFF) << 24) |
+                               ((data[i + 1] & 0xFF) << 16) |
+                               ((data[i + 2] & 0xFF) << 8) |
+                               (data[i + 3] & 0xFF);
                 i += 4;
-                if (valueLen < 0 || i + valueLen > data.Length)
+                if (valueLen < 0 || valueLen > data.Length - i)
                 {
                     throw new Exception("value error");
                 }
 
-                byte[] value = CopyOfRange(data, i, i + valueLen);
+                byte[] value = new byte[valueLen];
+                Buffer.BlockCopy(data, i, value, 0, valueLen);
                 i += valueLen;
 
                 m[key] = value;

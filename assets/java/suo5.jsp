@@ -949,7 +949,13 @@
                 m.put("_", junk);
             }
 
-            ByteArrayOutputStream buf = new ByteArrayOutputStream();
+            int serializedLength = 0;
+            for (Object keyObject : m.keySet()) {
+                String key = (String) keyObject;
+                byte[] value = (byte[]) m.get(key);
+                serializedLength += 1 + key.length() + 4 + value.length;
+            }
+            ByteArrayOutputStream buf = new ByteArrayOutputStream(serializedLength);
             Object[] keys = m.keySet().toArray();
             for (int i = 0; i < keys.length; i++) {
                 String key = (String) keys[i];
@@ -1030,7 +1036,7 @@
                     throw new Exception("value error");
                 }
 
-                if (i + vLen > bs.length) {
+                if (vLen > bs.length - i) {
                     throw new Exception("value error");
                 }
                 byte[] value = copyOfRange(bs, i, i + vLen);

