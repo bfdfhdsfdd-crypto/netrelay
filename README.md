@@ -18,21 +18,12 @@ NetRelay 是一款高性能 HTTP 隧道客户端，面向获授权的网络测�
 
 ## 主要特性
 
-- **优异的传输性能**
-    - 全双工: 借助双向 Chunked-Encoding 实现单连接双向通信，传输性能接近 FRP
-    - 半双工: 下行长连接+上行短连接实现，在 Nginx 反代场景下仍可保持良好性能
-    - 短链接: 上下行均使用短连接，适配多层反代和严格限制长连接的场景，作为兜底方案
-- **良好的服务端兼容性**
-    - Java 支持 Tomcat、WebLogic、JBoss、Resin 等主流中间件, JDK6 ~ JDK 2x 全版本支持
-    - .Net 支持 IIS 下所有 .Net Framework 版本 (>=2.0)
-    - PHP 支持 Nginx/Apache 等服务器环境, PHP 5.6 ~ PHP 8.x 全版本支持
-- **复杂网络环境支持**
-    - 支持一层、两层、多层反向代理下的稳定连接
-    - 支持通过流量转发和请求重试来支持负载均衡场景
-    - 支持配置上游代理（HTTP/SOCKS5）
-- **稳定可靠的工程实现**
-    - 正确可靠的连接控制、并发管理、心跳保活、异常重连等
-    - 完善的单元测试和集成测试保障质量
+- **四种连接模式**：自动探测、全双工、半双工和短连接（`classic`），按目标服务器和反向代理能力选择。
+- **兼容既有服务端**：帧编码与服务端请求格式保持 wire-format 兼容，可继续使用已部署的 `suo5.jsp`、`suo5.php`、`suo5.aspx` 等端点。
+- **本地代理和端口转发**：提供 SOCKS5 代理，也可将本地 TCP 连接转发到指定目标。
+- **可配置的 HTTP 通信**：支持上游 HTTP/SOCKS5 代理、自定义请求头、Cookie Jar、心跳和 Gzip 开关、请求重试及负载均衡重定向。
+- **传输稳定性与资源控制**：处理短读/短写、缓冲区复用和并发背压；分块编码并限制帧解码输入，对传输帧设置 32 MiB 大小上限。编码和序列化优化不改变与既有服务端通信的 wire format。
+- **持续集成和发布**：自动运行 Go 测试、GUI 前端构建及多平台 CLI 构建；版本标签会触发 Linux amd64/arm64 容器镜像发布。
 
 ## 快速开始
 
@@ -40,10 +31,10 @@ NetRelay 是一款高性能 HTTP 隧道客户端，面向获授权的网络测�
 
 前往 [Releases](https://github.com/bfdfhdsfdd-crypto/netrelay/releases) 下载对应平台的二进制文件：
 
-- `netrelay-gui-*` - 图形界面版本 (推荐)
+- `netrelay-gui-*` - 图形界面版本
 - `netrelay-*` - 命令行版本
 
-支持平台：Windows、macOS (Intel/Apple Silicon)、Linux
+CLI 当前提供 Windows amd64、macOS amd64/arm64 和 Linux amd64/arm64 构建。GUI 安装包按发布页提供的操作系统下载。
 
 ### 容器镜像
 
@@ -97,61 +88,55 @@ curl -x socks5h://127.0.0.1:1111 http://internal.target.com
 
 ## 客户端
 
-GUI 版基于 [Wails](https://github.com/wailsapp/wails) 构建，支持 Windows 和 macOS 和 Linux
-三大主流系统。针对日常使用习惯做了大量改进优化，界面功能简洁易懂，推荐大多数用户使用此版本。
+GUI 版基于 [Wails](https://github.com/wailsapp/wails) 构建，提供 SOCKS5 代理和 TCP 端口转发两种工作方式、连接模式选择、运行日志、实时连接数和传输速率，以及 JSON 配置导入/导出。高级选项可配置超时、重试、请求体大小、短连接 QPS、上游代理、请求头、Cookie Jar、心跳和 Gzip。
 
-> 该实现依赖系统的 Webview 框架, Windows 11 和 MacOS 已自带该组件，其他系统会弹框请允许下载安装，否则无法使用。
+> GUI 和 CLI 共用后端默认配置：请求方法为 POST，监听地址为 `127.0.0.1:1111`。GUI 依赖系统 WebView 组件。
 
-CLI 版本适合喜欢命令行操作的用户，或需要在服务器上运行的场景。
+CLI 版本适合命令行和服务器场景。常用参数如下（CLI 默认值）：
 
-```bash
-$ ./netrelay -h
+| 参数 | 默认值 | 说明 |
+|---|---|---|
+| `-t`, `--target` | 必填 | 兼容服务端 URL |
+| `-l`, `--listen` | `127.0.0.1:1111` | 本地 SOCKS5 或 TCP 转发监听地址 |
+| `-m`, `--method` | `POST` | HTTP 请求方法 |
+| `--mode` | `auto` | `auto`、`full`、`half` 或 `classic` |
+| `--auth` | 空（无认证） | 本地 SOCKS5 用户名和密码，格式为 `username:password` |
+| `-f`, `--forward` | 空 | 设置后将监听到的 TCP 连接转发到此目标，而不是提供 SOCKS5 代理 |
+| `-r`, `--redirect` | 空 | 负载均衡场景下的重定向 URL |
+| `-H`, `--header` | 无 | 额外 HTTP 请求头，可重复指定 |
+| `--ua` | 自动生成 | 设置 HTTP User-Agent；未指定时由客户端生成 |
+| `--proxy` | 无 | 上游 HTTP(S)/SOCKS5 代理，可重复指定 |
+| `--timeout` | `5` 秒 | 请求超时 |
+| `-S`, `--max-body-size` | `524288` 字节 | 单次请求体大小上限 |
+| `--retry` | `1` | 请求重试次数 |
+| `--classic-poll-qps` (`--qps`) | `6` | `classic` 模式轮询 QPS |
+| `--classic-poll-interval` (`--qi`) | `200` 毫秒 | `classic` 模式轮询间隔 |
+| `--dirty-size` (`--jk`) | `0` | 填充传输数据以尝试绕过代理缓冲，单位字节 |
+| `-E`, `--exclude-domain` | 无 | 不经代理转发的域名规则，可重复指定 |
+| `--exclude-domain-file` (`--ef`) | 无 | 每行一个排除域名规则的文件 |
+| `-c`, `--config` | 无 | 从 JSON 文件读取配置 |
+| `-d`, `--debug` | `false` | 输出调试信息 |
+| `--no-heartbeat` (`--nh`) | `false` | 禁用每 5 秒发送的心跳 |
+| `--no-gzip` (`--ng`) | `false` | 禁用 Gzip，提升旧服务端兼容性 |
+| `--jar` | `false` | 启用 Cookie Jar |
+| `--no-browser-headers` (`--nb`) | `false` | 不自动添加浏览器请求头 |
 
-USAGE:
-   netrelay [global options] command [command options]
-
-GLOBAL OPTIONS:
-   --config value, -c value                                               the filepath for json config file
-   --target value, -t value                                               the remote server url, ex: http://localhost:8080/suo5.jsp
-   --listen value, -l value                                               listen address of socks5 server (default: "127.0.0.1:1111")
-   --method value, -m value                                               http request method (default: "POST")
-   --redirect value, -r value                                             redirect to the url if host not matched, used to bypass load balance
-   --auth value                                                           socks5 creds, username:password, leave empty to auto generate
-   --mode value                                                           connection mode, choices are auto, full, half, classic (default: "auto")
-   --header value, -H value [ --header value, -H value ]                  use extra header, ex -H 'Cookie: abc'
-   --ua value                                                             shortcut to set the request User-Agent
-   --timeout value                                                        request timeout in seconds (default: 5)
-   --max-body-size value, -S value                                        request max body size (default: 524288)
-   --retry value                                                          request retry (default: 1)
-   --classic-poll-qps value, --qps value                                  request poll qps, only used in classic mode (default: 6)
-   --classic-poll-interval value, --qi value                              request poll interval in milliseconds, only used in classic mode (default: 200)
-   --proxy value [ --proxy value ]                                        set upstream proxy, support socks5/http(s), eg: socks5://127.0.0.1:7890
-   --debug, -d                                                            debug the traffic, print more details (default: false)
-   --no-heartbeat, --nh                                                   disable heartbeat to the remote server which will send data every 5s (default: false)
-   --no-gzip, --ng                                                        disable gzip compression, which will improve compatibility with some old servers (default: false)
-   --jar                                                                  enable cookiejar (default: false)
-   --no-browser-headers, --nb                                             disable browser headers, which will not send Accept, Accept-Encoding, etc. (default: false)
-   --exclude-domain value, -E value [ --exclude-domain value, -E value ]  exclude certain domain name for proxy, ex -E 'portswigger.net'
-   --exclude-domain-file value, --ef value                                exclude certain domains for proxy in a file, one domain per line
-   --forward value, -f value                                              forward target address, enable forward mode when specified
-   --help, -h                                                             show help
-   --version, -v                                                          print the version
-```
+查看完整帮助和版本：`./netrelay --help`、`./netrelay --version`。
 
 ## 传输模式对比
 
 NetRelay 提供四种传输模式，以适应不同的网络环境和中间件限制：
 
-|   模式    | 原理                          | 延迟 | 吞吐量 | 适用场景               |
-|:-------:|:----------------------------|:--:|:---:|:-------------------|
-| **自动**  | 自动探测并选择最佳模式                 | -  |  -  | 默认推荐，适合大多数场景       |
-| **全双工** | 双向 Chunked-Encoding，单连接双向通信 | 极低 | 极高  | 直连或简单反代，性能最佳       |
-| **半双工** | 下行长连接 + 上行短连接               | 低  |  高  | Nginx 反代、部分 WAF 场景 |
-| **短连接** | 上下行均为短连接 + 轮询               | 中  |  中  | 多层反代、严格限制长连接的环境    |
+| 模式 | 通信方式 | 适用场景 |
+|:---:|---|---|
+| **自动**  | 探测服务端支持的通信方式并选择模式 | 默认推荐，适合先尝试 |
+| **全双工** | 通过双向 Chunked-Encoding 建立持续双向通信 | 目标及中间代理支持流式请求/响应 |
+| **半双工** | 下行使用长连接，上行使用短请求 | 长连接上行受限的反向代理环境 |
+| **短连接** | 通过请求轮询收发数据 | 长连接不可用或不稳定的环境 |
 
 ## 使用指南
 
-为了方便说明，指南部分均使用命令行版本进行演示，GUI 版本功能完全一致且更易使用。
+以下示例使用 CLI。GUI 可通过界面填写连接信息，也支持导入/导出同格式 JSON 配置。
 
 ### 基本用法
 
@@ -217,29 +202,32 @@ NetRelay 提供四种传输模式，以适应不同的网络环境和中间件�
 
 ### 使用配置文件
 
-支持通过 JSON 配置文件管理参数，GUI 和 CLI 配置格式完全兼容：
+支持通过 JSON 配置文件管理参数。字段名与 Go 配置结构一致，GUI 导入/导出使用相同格式：
 
 ```json
 {
   "method": "POST",
   "listen": "127.0.0.1:1111",
   "target": "https://target.com/suo5.jsp",
-  "no_auth": true,
   "username": "",
   "password": "",
   "mode": "auto",
-  "buffer_size": 327680,
-  "timeout": 10,
+  "timeout": 5,
   "debug": false,
-  "upstream_proxy": "",
+  "upstream_proxy": [],
   "redirect_url": "",
-  "raw_header": [
-    "User-Agent: Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36"
-  ],
+  "raw_header": [],
   "disable_heartbeat": false,
   "disable_gzip": false,
-  "disable_cookiejar": true,
-  "exclude_domain": null
+  "enable_cookiejar": false,
+  "exclude_domain": [],
+  "forward_target": "",
+  "dirty_size": 0,
+  "max_body_size": 524288,
+  "classic_poll_qps": 6,
+  "classic_poll_interval": 200,
+  "retry_count": 1,
+  "impersonate_browser": true
 }
 ```
 
@@ -251,6 +239,10 @@ NetRelay 提供四种传输模式，以适应不同的网络环境和中间件�
 
 # GUI 可通过界面导入/导出配置
 ```
+
+### Go 二次开发
+
+Go 模块路径为 `github.com/bfdfhdsfdd-crypto/netrelay`，隧道客户端 API 位于 `github.com/bfdfhdsfdd-crypto/netrelay/tunnel`。常用入口包括 `tunnel.Config`、`tunnel.DefaultConfig()` 和 `tunnel.Connect(ctx, config)`；传输连接与协议实现也在 `tunnel` 包中。
 
 ## 常见问题
 
