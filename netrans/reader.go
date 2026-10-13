@@ -14,8 +14,9 @@ var ErrReadTimeout = errors.New("read timeout")
 var ErrReaderClosed = errors.New("reader has been closed")
 
 type readResult struct {
-	data []byte
-	err  error
+	data   []byte
+	buffer *[]byte
+	err    error
 }
 
 type TimeoutReader struct {
@@ -24,7 +25,7 @@ type TimeoutReader struct {
 	readCh        chan readResult
 	buffers       sync.Pool
 	pending       []byte
-	pendingBuffer []byte
+	pendingBuffer *[]byte
 	pendingErr    error
 	mu            sync.Mutex
 	closed        bool
@@ -50,7 +51,8 @@ func NewTimeoutReadCloser(ctx context.Context, rc io.ReadCloser, timeout time.Du
 		cancel: cancel,
 	}
 	tr.buffers.New = func() any {
-		return make([]byte, 4096)
+		buf := make([]byte, 4096)
+		return &buf
 	}
 	tr.startLoop()
 	return tr
@@ -61,21 +63,22 @@ func (r *TimeoutReader) startLoop() {
 		defer close(r.readCh)
 		reader := bufio.NewReaderSize(r.rc, 4096)
 		for {
-			buf := r.buffers.Get().([]byte)
+			buffer := r.buffers.Get().(*[]byte)
+			buf := *buffer
 			n, err := reader.Read(buf)
 			if n > 0 {
 				select {
-				case r.readCh <- readResult{data: buf[:n], err: err}:
+				case r.readCh <- readResult{data: buf[:n], buffer: buffer, err: err}:
 					if err != nil {
 						return
 					}
 				case <-r.ctx.Done():
-					r.buffers.Put(buf)
+					r.buffers.Put(buffer)
 					return
 				}
 				continue
 			}
-			r.buffers.Put(buf)
+			r.buffers.Put(buffer)
 			if err != nil {
 				select {
 				case r.readCh <- readResult{err: err}:
@@ -124,7 +127,7 @@ func (r *TimeoutReader) Read(b []byte) (int, error) {
 			return 0, result.err
 		}
 		r.pending = result.data
-		r.pendingBuffer = result.data[:cap(result.data)]
+		r.pendingBuffer = result.buffer
 		r.pendingErr = result.err
 		n := copy(b, r.pending)
 		r.pending = r.pending[n:]
