@@ -16,7 +16,7 @@
 参考 [SharpMemshell](https://github.com/A-D-Team/SharpMemshell/blob/main/VirtualPath/memshell.cs) 项目可以轻松的将 Suo5
 改为内存马形式来执行。
 
-当前目录中的 `Suo5VirtualPath.cs` 是一个参考实现，**使用之前你必须将 242 行的 `if (false)` 改成自己的判断逻辑**
+当前目录中的 `NetRelayVirtualPath.cs` 是一个参考实现，**使用之前你必须将 242 行的 `if (false)` 改成自己的判断逻辑**
 ，否则永远不会命中处理逻辑,比如
 
 ```
@@ -27,16 +27,16 @@ if (httpContext.Request.Headers.Get("User-Agent") == "MyCustomAgent")
 
 ### 编译使用
 
-将 `Suo5VirtualPath.cs` 编译成 DLL:
+将 `NetRelayVirtualPath.cs` 编译成 DLL:
 
 ```
-C:\Windows\Microsoft.NET\Framework64\v2.0.50727\csc.exe /t:library Suo5VirtualPath.cs
+C:\Windows\Microsoft.NET\Framework64\v2.0.50727\csc.exe /t:library NetRelayVirtualPath.cs
 ```
 
 将 DLL 转为 Base64:
 
 ```
-powershell -NoProfile -Command "[Convert]::ToBase64String([IO.File]::ReadAllBytes('Suo5VirtualPath.dll'))" > Suo5VirtualPath.b64    
+powershell -NoProfile -Command "[Convert]::ToBase64String([IO.File]::ReadAllBytes('NetRelayVirtualPath.dll'))" > NetRelayVirtualPath.b64
 ```
 
 替代下面文件中的 `%%base64%%` 部分为上一步生成的 Base64 内容:

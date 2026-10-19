@@ -38,7 +38,7 @@ func main() {
 		&cli.StringFlag{
 			Name:     "target",
 			Aliases:  []string{"t"},
-			Usage:    "the remote server url, ex: http://localhost:8080/suo5.jsp",
+			Usage:    "the remote server url, ex: http://localhost:8080/netrelay.jsp",
 			Value:    defaultConfig.Target,
 			Required: true,
 		},

@@ -223,6 +223,7 @@ jobs:
       - uses: ./.github/actions/run-tests
         with:
           service_port: 9080
+          legacy_url: 'http://127.0.0.1:82/assets/suo5.jsp'
 
 
   tongweb-test:
@@ -251,9 +252,9 @@ jobs:
         with:
           no_gzip: true
           service_port: 9060
-          direct_url: 'http://127.0.0.1:82/console/assets/suo5.jsp'
-          nginx_inner_url: 'http://127.0.0.1:81/console/assets/suo5.jsp'
-          nginx_url: 'http://127.0.0.1:80/console/assets/suo5.jsp'
+          direct_url: 'http://127.0.0.1:82/console/assets/netrelay.jsp'
+          nginx_inner_url: 'http://127.0.0.1:81/console/assets/netrelay.jsp'
+          nginx_url: 'http://127.0.0.1:80/console/assets/netrelay.jsp'
           test_redirect: 'false' # 似乎和上面 resin 一样的问题，javaagent 导致 httpurlconnection 找不到?
 
 
@@ -406,10 +407,11 @@ jobs:
       - uses: ./.github/actions/run-tests
         with:
           service_port: 80
-          direct_url: 'http://127.0.0.1:82/suo5.aspx'
-          nginx_inner_url: 'http://127.0.0.1:81/suo5.aspx'
-          nginx_url: 'http://127.0.0.1:80/suo5.aspx'
-          redirect_path: '/suo5.aspx'
+          direct_url: 'http://127.0.0.1:82/netrelay.aspx'
+          nginx_inner_url: 'http://127.0.0.1:81/netrelay.aspx'
+          nginx_url: 'http://127.0.0.1:80/netrelay.aspx'
+          redirect_path: '/netrelay.aspx'
+          legacy_url: 'http://127.0.0.1:82/suo5.aspx'
           test_full: 'false'
           test_inner: 'false'
           test_top: 'false'
@@ -511,10 +513,11 @@ jobs:
       - uses: ./.github/actions/run-tests
         with:
           service_port: 80
-          direct_url: 'http://127.0.0.1:82/suo5.php'
-          nginx_inner_url: 'http://127.0.0.1:81/suo5.php'
-          nginx_url: 'http://127.0.0.1:80/suo5.php'
-          redirect_path: '/suo5.php'
+          direct_url: 'http://127.0.0.1:82/netrelay.php'
+          nginx_inner_url: 'http://127.0.0.1:81/netrelay.php'
+          nginx_url: 'http://127.0.0.1:80/netrelay.php'
+          redirect_path: '/netrelay.php'
+          legacy_url: 'http://127.0.0.1:82/suo5.php'
           test_full: 'false'
           test_half: ${{ matrix.test_half }}
           test_inner: 'false'

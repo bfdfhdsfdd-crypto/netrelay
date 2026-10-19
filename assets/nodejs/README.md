@@ -8,10 +8,10 @@
 
 ## 独立运行
 
-`suo5.js` 不依赖第三方 npm 模块，直接运行即可：
+`netrelay.js` 不依赖第三方 npm 模块，直接运行即可：
 
 ```bash
-node suo5.js
+node netrelay.js
 ```
 
 默认监听 `8080` 端口，NetRelay 客户端连接地址为：

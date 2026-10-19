@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 const directory = path.resolve(__dirname, '../../assets/nodejs');
-const canonicalPath = path.join(directory, 'suo5.js');
+const canonicalPath = path.join(directory, 'netrelay.js');
 const source = fs.readFileSync(canonicalPath, 'utf8').replace(/\r\n/g, '\n');
 const checkOnly = process.argv.includes('--check');
 

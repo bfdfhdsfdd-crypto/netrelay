@@ -19,7 +19,7 @@ NetRelay 是一款高性能 HTTP 隧道客户端，面向获授权的网络测�
 ## 主要特性
 
 - **四种连接模式**：自动探测、全双工、半双工和短连接（`classic`），按目标服务器和反向代理能力选择。
-- **兼容既有服务端**：帧编码与服务端请求格式保持 wire-format 兼容，可继续使用已部署的 `suo5.jsp`、`suo5.php`、`suo5.aspx` 等端点。
+- **兼容既有服务端**：帧编码与服务端请求格式保持 wire-format 兼容，可继续使用已部署的 `suo5.jsp`、`suo5.php`、`suo5.aspx` 等旧端点；新部署可使用 `netrelay.jsp`、`netrelay.php`、`netrelay.aspx`。
 - **本地代理和端口转发**：提供 SOCKS5 代理，也可将本地 TCP 连接转发到指定目标。
 - **可配置的 HTTP 通信**：支持上游 HTTP/SOCKS5 代理、自定义请求头、Cookie Jar、心跳和 Gzip 开关、请求重试及负载均衡重定向。
 - **传输稳定性与资源控制**：处理短读/短写、缓冲区复用和并发背压；分块编码并限制帧解码输入，对传输帧设置 32 MiB 大小上限。编码和序列化优化不改变与既有服务端通信的 wire format。
@@ -44,13 +44,13 @@ CLI 当前提供 Windows amd64、macOS amd64/arm64 和 Linux amd64/arm64 构建�
 echo "$GHCR_TOKEN" | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin
 docker pull ghcr.io/bfdfhdsfdd-crypto/netrelay:v0.1.0
 docker run --rm -p 1111:1111 ghcr.io/bfdfhdsfdd-crypto/netrelay:v0.1.0 \
-  --target https://your-authorized-server.example/suo5.jsp \
+  --target https://your-authorized-server.example/netrelay.jsp \
   --listen 0.0.0.0:1111
 ```
 
 `GHCR_TOKEN` 需要具有 `read:packages` 权限。首次发布的镜像包默认是私有的；如需匿名拉取，可在 GitHub Packages 的包设置中将可见性改为 Public。
 
-服务端脚本文件名与既有 `suo5.jsp` 等部署保持兼容；客户端可继续使用现有服务端。
+服务端主入口使用 `netrelay.jsp`、`netrelay.php`、`netrelay.aspx` 等清晰名称，旧的 `suo5.*` 文件名仍可作为兼容入口；客户端也可继续连接已有部署。
 
 ### 2. 部署服务端
 
@@ -64,9 +64,9 @@ NetRelay 针对 `auto` 模式（默认）做了大量的优化，大多数时候
 URL，即可自动确认目标支持的通信模式并在本地启动代理服务：
 
 ```bash
-$ ./netrelay -t http://target.com/suo5.jsp
+$ ./netrelay -t http://target.com/netrelay.jsp
 ...
-[INFO] 14:28 connecting to target http://target.com/suo5.jsp
+[INFO] 14:28 connecting to target http://target.com/netrelay.jsp
 [INFO] 14:28 preferred connection mode: half
 [INFO] 14:28 handshake success, using session id 05q21upecl90yccl
 [INFO] 14:28 netrelay is going to work on half mode
@@ -142,18 +142,18 @@ NetRelay 提供四种传输模式，以适应不同的网络环境和中间件�
 
 ```bash
 # 自动检测最佳传输模式
-./netrelay -t https://target.com/suo5.jsp
+./netrelay -t https://target.com/netrelay.jsp
 
 # 指定 HTTP 请求方法为 GET, 默认 POST
-./netrelay -m GET -t https://target.com/suo5.jsp
+./netrelay -m GET -t https://target.com/netrelay.jsp
 
 # 修改 Socks5 监听地址和端口, 并设置认证信息。 默认监听 127.0.0.1:1111，无认证
-./netrelay -t https://target.com/suo5.jsp -l 0.0.0.0:7788 --auth user:pass123
+./netrelay -t https://target.com/netrelay.jsp -l 0.0.0.0:7788 --auth user:pass123
 
 # 设置上游代理
 # 特别注意! 仅短链接模式支持在 Burp 中抓包，其他模式会导致连接异常
-./netrelay -t https://target.com/suo5.jsp --proxy socks5://127.0.0.1:7890
-./netrelay -t https://target.com/suo5.jsp --proxy http://127.0.0.1:8080
+./netrelay -t https://target.com/netrelay.jsp --proxy socks5://127.0.0.1:7890
+./netrelay -t https://target.com/netrelay.jsp --proxy http://127.0.0.1:8080
 ```
 
 ### 负载均衡场景
@@ -161,7 +161,7 @@ NetRelay 提供四种传输模式，以适应不同的网络环境和中间件�
 当目标存在负载均衡时，需在所有后端部署服务端，并指定重定向 URL：
 
 ```bash
-./netrelay -t https://target.com/suo5.jsp -r http://172.0.3.2/suo5.jsp
+./netrelay -t https://target.com/netrelay.jsp -r http://172.0.3.2/netrelay.jsp
 ```
 
 原理：判断 `-r` 中 URL 的 IP 是否与服务器网卡 IP 匹配，不匹配则转发请求。
@@ -172,10 +172,10 @@ NetRelay 提供四种传输模式，以适应不同的网络环境和中间件�
 
 ```bash
 # 直接指定域名
-./netrelay -t https://target.com/suo5.jsp -E example.com -E google.com
+./netrelay -t https://target.com/netrelay.jsp -E example.com -E google.com
 
 # 使用域名列表文件（一行一个）
-./netrelay -t https://target.com/suo5.jsp -ef ./excludes.txt
+./netrelay -t https://target.com/netrelay.jsp -ef ./excludes.txt
 ```
 
 > **注意**：确保代理请求中包含域名而非 IP。使用 `socks5h://` 协议让 DNS 解析在代理端进行：
@@ -189,7 +189,7 @@ NetRelay 提供四种传输模式，以适应不同的网络环境和中间件�
 
 ```bash
 # 将本地 1111 端口转发到目标内网的 MySQL
-./netrelay -t https://target.com/suo5.jsp -f 172.16.0.10:3306
+./netrelay -t https://target.com/netrelay.jsp -f 172.16.0.10:3306
 ```
 
 ### 启用 Cookie Jar
@@ -197,7 +197,7 @@ NetRelay 提供四种传输模式，以适应不同的网络环境和中间件�
 保持会话 Cookie，某些服务端可能需要：
 
 ```bash
-./netrelay -t https://target.com/suo5.jsp --jar
+./netrelay -t https://target.com/netrelay.jsp --jar
 ```
 
 ### 使用配置文件
@@ -208,7 +208,7 @@ NetRelay 提供四种传输模式，以适应不同的网络环境和中间件�
 {
   "method": "POST",
   "listen": "127.0.0.1:1111",
-  "target": "https://target.com/suo5.jsp",
+  "target": "https://target.com/netrelay.jsp",
   "username": "",
   "password": "",
   "mode": "auto",
@@ -252,23 +252,20 @@ NetRelay 的 `--auth` 参数用于设置**本地 SOCKS5 代理**的认证，格�
 
 ```bash
 # 设置 SOCKS5 认证
-./netrelay -t https://target.com/suo5.jsp --auth admin:P@ssw0rd
+./netrelay -t https://target.com/netrelay.jsp --auth admin:P@ssw0rd
 
 # 使用时需要带上认证信息
 curl -x socks5h://admin:P@ssw0rd@127.0.0.1:1111 http://internal.com
 ```
 
-服务端脚本本身不含密码保护功能。如需保护服务端，建议：
-
-- 修改服务端文件名和路径
-- 使用内存马自带的准入规则实现
+服务端脚本本身不含密码保护功能。如需保护服务端，建议使用反向代理身份验证、网络访问控制或应用层准入规则。
 
 **Q: 如何在 Burp 中抓包调试？**
 
 仅**短连接模式**支持在 Burp 中抓包，其他模式的长连接会导致 Burp 无法正常处理：
 
 ```bash
-./netrelay -t https://target.com/suo5.jsp --mode classic --proxy http://127.0.0.1:8080
+./netrelay -t https://target.com/netrelay.jsp --mode classic --proxy http://127.0.0.1:8080
 ```
 
 **Q: 如何选择传输模式？**

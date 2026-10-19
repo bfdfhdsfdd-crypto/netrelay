@@ -2,7 +2,7 @@
 
 ## 进入查看详情
 
-服务端脚本与既有 `suo5.jsp`、`suo5.php` 等部署文件名及传输帧格式保持兼容；改名后的客户端仍可连接已部署的旧服务端。
+服务端主入口使用清晰的 `netrelay.jsp`、`netrelay.php`、`netrelay.aspx` 和 `netrelay.js` 文件名，传输帧格式保持兼容。旧的 `suo5.*` 文件名仍保留为兼容入口；改名后的客户端也可继续连接已部署的旧服务端。
 
 - [Java](java)
 - [.NET](dotnet)

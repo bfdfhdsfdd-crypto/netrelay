@@ -71,6 +71,7 @@ start_client() {
 }
 
 node tests/nodejs/generate.js --check
+node --check assets/nodejs/netrelay.js
 node --check assets/nodejs/suo5.js
 
 node "$NODE_SERVER" >"$LOG_DIR/server.log" 2>&1 &

@@ -35,19 +35,23 @@ inputs:
     required: false
   redirect_path:
     description: "Redirect path for building redirect URL"
-    default: '/assets/suo5.jsp'
+    default: '/assets/netrelay.jsp'
     required: false
   nginx_url:
     description: "Nginx URL for tests"
-    default: 'http://127.0.0.1:80/assets/suo5.jsp'
+    default: 'http://127.0.0.1:80/assets/netrelay.jsp'
     required: false
   nginx_inner_url:
     description: "Nginx inner URL for tests"
-    default: 'http://127.0.0.1:81/assets/suo5.jsp'
+    default: 'http://127.0.0.1:81/assets/netrelay.jsp'
     required: false
   direct_url:
     description: "Direct URL for tests"
-    default: 'http://127.0.0.1:82/assets/suo5.jsp'
+    default: 'http://127.0.0.1:82/assets/netrelay.jsp'
+    required: false
+  legacy_url:
+    description: "Optional legacy server endpoint compatibility check"
+    default: ''
     required: false
   service_port:
     description: "Service port for the application"
@@ -71,6 +75,9 @@ runs:
       run: |
         set -ex
         ./helper ready -u ${{ inputs.direct_url }} -t 60
+        if [ -n "${{ inputs.legacy_url }}" ]; then
+          ./helper ready -u ${{ inputs.legacy_url }} -t 60
+        fi
         chmod +x ./netrelay_test ./mbtest
 
         SRV1_ID=$(docker compose ps -q srv1)
