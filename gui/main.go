@@ -17,7 +17,7 @@ func main() {
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:     "Suo5 - 开源版 v0.0.0",
+		Title:     "NetRelay",
 		Width:     620,
 		Height:    860,
 		MinWidth:  550,

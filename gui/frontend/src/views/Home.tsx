@@ -18,6 +18,24 @@ import {ConnectStatus, Feature} from "@/views/types";
 import LogView from "@/views/Log";
 import Footer from "@/views/Footer";
 
+const FormSchema = z.object({
+  method: z.string().min(1),
+  target: z.string().min(1),
+  listen: z.string().min(1),
+  username: z.string(),
+  password: z.string(),
+  mode: z.string().min(1),
+  feature: z.nativeEnum(Feature),
+  forward_target: z.string(),
+}).superRefine((data, ctx) => {
+  if (data.feature === Feature.FORWARD && !data.forward_target) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['forward_target'],
+    })
+  }
+})
+
 export default function Home() {
   const [openAdvanced, setOpenAdvanced] = useState(false);
   const [config, setConfig] = useState<tunnel.Config>();
@@ -25,25 +43,6 @@ export default function Home() {
   const [connectDisabled, setConnectDisabled] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [successMessage, setSuccessMessage] = useState<string>('');
-
-  const FormSchema = z.object({
-    method: z.string().min(1),
-    target: z.string().min(1),
-    listen: z.string().min(1),
-    username: z.string(),
-    password: z.string(),
-    mode: z.string().min(1),
-    feature: z.nativeEnum(Feature),
-    forward_target: z.string(),
-  }).superRefine((data, ctx) => {
-    if (data.feature === Feature.FORWARD && !data.forward_target) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['forward_target'],
-      })
-    }
-  })
-
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
@@ -193,7 +192,6 @@ export default function Home() {
 
   useEffect(() => {
     DefaultConfig().then((defaultConfig) => {
-      // defaultConfig.target = 'http://localhost:8011/tomcat_test_war_exploded/suo5_new.jsp'
       setConfig(defaultConfig)
       updateFormValue(defaultConfig)
     });

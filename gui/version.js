@@ -12,10 +12,15 @@ manifest.info.productVersion = version
 const data = JSON.stringify(manifest, null, 2)
 fs.writeFileSync("wails.json", data)
 
-// read main.go and replace v0.0.0 with the new version
+// Set the window title to the version being packaged.
 const mainGoPath = "./main.go"
 const mainGoContent = fs.readFileSync(mainGoPath, "utf8")
-const newMainGoContent = mainGoContent.replace(/v\d+\.\d+\.\d+/, `v${version}`)
+const titlePattern = /Title:\s+"NetRelay(?: v\d+\.\d+\.\d+)?"/
+if (!titlePattern.test(mainGoContent)) {
+    console.error("Could not find the NetRelay window title in main.go")
+    process.exit(1)
+}
+const newMainGoContent = mainGoContent.replace(titlePattern, `Title: "NetRelay v${version}"`)
 fs.writeFileSync(mainGoPath, newMainGoContent)
 
 console.log(`Updated build version to ${version}`)
