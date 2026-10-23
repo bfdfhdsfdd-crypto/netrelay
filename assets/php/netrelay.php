@@ -275,10 +275,11 @@ function marshalBase64($m) {
 
     $xorKey = array(mt_rand(1, 255), mt_rand(1, 255));
     $bufLen = strlen($buf);
+    $dataChars = array();
     for ($i = 0; $i < $bufLen; $i++) {
-        $buf[$i] = chr(ord($buf[$i]) ^ $xorKey[$i % 2]);
+        $dataChars[] = chr(ord($buf[$i]) ^ $xorKey[$i % 2]);
     }
-    $data = base64UrlEncode($buf);
+    $data = base64UrlEncode(implode('', $dataChars));
 
     $header = pack('C2N', $xorKey[0], $xorKey[1], strlen($data));
     $headerBytes = unpack('C*', $header);
@@ -328,10 +329,11 @@ function unmarshalBase64($input) {
     }
 
     $dataLen = strlen($data);
+    $decryptedChars = array();
     for ($i = 0; $i < $dataLen; $i++) {
-        $data[$i] = chr(ord($data[$i]) ^ $xorKey[$i % 2]);
+        $decryptedChars[] = chr(ord($data[$i]) ^ $xorKey[$i % 2]);
     }
-    $decrypted = $data;
+    $decrypted = implode('', $decryptedChars);
 
     $i = 0;
     $len = strlen($decrypted);

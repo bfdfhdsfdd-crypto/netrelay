@@ -630,21 +630,21 @@ class G
 
             // Create header: [2 bytes XOR key][4 bytes data length (XOR encrypted)]
             byte[] header = new byte[6];
-            Buffer.BlockCopy(xorKey, 0, header, 0, xorKey.Length);
+            Array.Copy(xorKey, 0, header, 0, xorKey.Length);
             byte[] lenBytes = U32ToBytes(base64Bytes.Length);
             for (int i = 0; i < 4; i++)
             {
                 lenBytes[i] = (byte)(lenBytes[i] ^ xorKey[i % 2]);
             }
 
-            Buffer.BlockCopy(lenBytes, 0, header, 2, lenBytes.Length);
+            Array.Copy(lenBytes, 0, header, 2, lenBytes.Length);
             string base64Header = Base64UrlEncode(header);
             byte[] base64HeaderBytes = Encoding.UTF8.GetBytes(base64Header);
 
             // Combine header + data
             byte[] result = new byte[base64HeaderBytes.Length + base64Bytes.Length];
-            Buffer.BlockCopy(base64HeaderBytes, 0, result, 0, base64HeaderBytes.Length);
-            Buffer.BlockCopy(base64Bytes, 0, result, base64HeaderBytes.Length, base64Bytes.Length);
+            Array.Copy(base64HeaderBytes, 0, result, 0, base64HeaderBytes.Length);
+            Array.Copy(base64Bytes, 0, result, base64HeaderBytes.Length, base64Bytes.Length);
             return result;
         }
 
@@ -711,7 +711,7 @@ class G
                 }
 
                 byte[] value = new byte[valueLen];
-                Buffer.BlockCopy(data, i, value, 0, valueLen);
+                Array.Copy(data, i, value, 0, valueLen);
                 i += valueLen;
 
                 m[key] = value;
